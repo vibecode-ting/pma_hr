@@ -1,0 +1,118 @@
+/**
+ * tokens.css — Design system CSS custom properties.
+ * All color, spacing, and type tokens for the HR-Portal "astro" dark/gold theme.
+ *
+ * Companion doc: design.md § 1. Visual identity — Color tokens
+ */
+
+:root {
+  /* ── Background layers ─────────────────────────────────────────────── */
+  --bg-void:          #0B0E14; /* Page background: near-black with slight blue undertone */
+  --bg-panel:         #12161F; /* Cards, table backgrounds, login card */
+  --bg-panel-raised:  #181D29; /* Hovered rows, modals, dropdowns */
+  --bg-inset:         #0E1119; /* Input fields, code/mono blocks */
+
+  /* ── Borders ───────────────────────────────────────────────────────── */
+  --border-hairline:  #2A2F3D; /* Default borders/dividers */
+  --border-gold:      #C9A24B; /* Focused inputs, active tab underline, accent borders */
+
+  /* ── Gold accent ───────────────────────────────────────────────────── */
+  --gold-500:         #D4AF37; /* Primary buttons, links, key numbers, active nav */
+  --gold-400:         #E6C766; /* Hover state of gold elements */
+  --gold-700:         #8A6D24; /* Pressed state, gold text on light backgrounds */
+  --gold-glow:        rgba(212, 175, 55, 0.18); /* Soft glow / box-shadow behind gold elements */
+
+  /* ── Text ──────────────────────────────────────────────────────────── */
+  --text-primary:     #F5F1E6; /* Headings, primary text (warm off-white) */
+  --text-secondary:   #A9AFC0; /* Secondary text, helper copy, table sub-values */
+  --text-muted:       #6B7080; /* Placeholders, disabled text, timestamps */
+
+  /* ── Decorative ────────────────────────────────────────────────────── */
+  --star-dim:         rgba(245, 241, 230, 0.35); /* Starfield dot color */
+
+  /* ── Status colors ─────────────────────────────────────────────────── */
+  --success:          #4FBE7E; /* Success toast, "on time" badge */
+  --warning:          #E0A93B; /* Late/remark badge (slightly more orange than gold) */
+  --danger:           #E5555F; /* Errors, "no record" / missing-checkout badge, destructive */
+  --info:             #5FA8D3; /* Informational banners */
+
+  /* ── Typography ────────────────────────────────────────────────────── */
+  --font-ui:          'Inter', 'Noto Sans Myanmar', 'Noto Sans TC', sans-serif;
+  --font-display:     'Manrope', 'Inter', 'Noto Sans Myanmar', 'Noto Sans TC', sans-serif;
+  --font-my:          'Noto Sans Myanmar', 'Inter', sans-serif;
+  --font-zh:          'Noto Sans TC', 'Inter', sans-serif;
+
+  /* ── Spacing scale ─────────────────────────────────────────────────── */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* ── Radius ────────────────────────────────────────────────────────── */
+  --radius-sm:  4px;
+  --radius-md:  8px;
+  --radius-lg: 12px;
+  --radius-pill: 999px;
+
+  /* ── Transitions ───────────────────────────────────────────────────── */
+  --transition-fast: all 120ms ease;
+
+  /* ── Shadows ───────────────────────────────────────────────────────── */
+  --shadow-card: 0 2px 24px rgba(0, 0, 0, 0.4);
+  --shadow-gold: 0 0 24px var(--gold-glow);
+
+  /* ── Header Brand & App Title Colors ────────────────────────────────────── */
+  --header-brand-color: #D4AF37; /* "Pouchen | B150 HR-Portal": gold in dark */
+  --app-title-color:    #F5F1E6; /* "Employee Attendance Error Automation Check Tool": bold white in dark */
+}
+
+/* ── Light Theme Overrides ───────────────────────────────────────────────── */
+[data-theme="light"] {
+  --bg-void:          #F8FAFC; /* Clean off-white/slate background */
+  --bg-panel:         #FFFFFF; /* White card background */
+  --bg-panel-raised:  #F1F5F9; /* Elevated panels, table header/hover */
+  --bg-inset:         #F8FAFC; /* Inputs, code blocks */
+
+  --border-hairline:  #E2E8F0; /* Clean borders */
+  --border-gold:      #C9A24B; /* Gold accent border */
+
+  --gold-500:         #B45309; /* Deep rich Gold for buttons/accents on light */
+  --gold-400:         #D97706;
+  --gold-700:         #92400E;
+  --gold-glow:        rgba(180, 83, 9, 0.15);
+
+  --text-primary:     #0F172A; /* High-contrast dark text */
+  --text-secondary:   #475569; /* Slate secondary */
+  --text-muted:       #64748B; /* Slate muted */
+
+  --star-dim:         transparent; /* Hide dark starfield */
+  --shadow-card:      0 4px 24px rgba(15, 23, 42, 0.08);
+  --shadow-gold:      0 0 24px rgba(180, 83, 9, 0.15);
+
+  /* Pouchen | B150 HR-Portal: SAME gold color as dark theme */
+  --header-brand-color: #D4AF37;
+
+  /* Employee Attendance Error Automation Check Tool: Dark Blue Color in Light theme */
+  --app-title-color:    #1E3A8A;
+}
+
+/* ── Language-specific font stacks ───────────────────────────────────────── */
+
+:lang(en) {
+  font-family: var(--font-ui);
+}
+
+:lang(my) {
+  font-family: var(--font-my);
+  line-height: 1.65;
+  word-break: break-word;
+}
+
+:lang(zh-Hant) {
+  font-family: var(--font-zh);
+}

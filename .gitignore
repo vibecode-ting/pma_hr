@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Config with real credentials — NEVER commit this file!
+# See config.example.json for the schema; copy it to config.json and fill in real credentials.
+# GitHub Pages sites are PUBLIC — do not store sensitive passwords in config.json on a public repo.
+config.json
+
+# Editor
+.vscode/
+.idea/
+*.suo
+*.user
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env files (vite bakes these into the bundle — prefer config.json for runtime secrets)
+.env
+.env.local
+.env.production
+
+# Root legacy data file (moved to doc/1-9.xls)
+/1-9.xls

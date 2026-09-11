@@ -1,0 +1,28 @@
+{
+  "name": "hr-portal-b150",
+  "version": "1.0.0",
+  "description": "Pouchen Myanmar Adidas B150 — Employee Attendance Error Automation Tool",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "typescript": "^5.4.5",
+    "vite": "^5.3.1",
+    "vitest": "^1.6.0"
+  },
+  "dependencies": {
+    "@fontsource/inter": "^5.0.18",
+    "@fontsource/manrope": "^5.0.18",
+    "@fontsource/noto-sans-myanmar": "^5.0.18",
+    "@fontsource/noto-sans-tc": "^5.0.18",
+    "jszip": "^3.10.1",
+    "lucide": "^0.395.0",
+    "xlsx": "^0.18.5"
+  }
+}
