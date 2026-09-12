@@ -268,42 +268,20 @@ function renderLogin(container: HTMLElement): void {
 
   page.appendChild(splitCard);
 
-  // ── Footer: Controls + Copyright + Developer credits directly under it ──
+  // ── Footer: Copyright + Developer credits ──
   const footer = document.createElement('footer');
   footer.className = 'login-footer';
 
-  // Footer controls (both theme & language switchers)
-  const footerControls = document.createElement('div');
-  footerControls.className = 'login-footer-controls';
+  const footerLine1 = document.createElement('div');
+  footerLine1.className = 'login-footer-line';
+  footerLine1.textContent = '© Pouchen Myanmar Adidas B150 — Internal Use Only';
+  
+  const footerLine2 = document.createElement('div');
+  footerLine2.className = 'login-footer-line';
+  footerLine2.innerHTML = `© Developed by <a href="mailto:ting.hah@pouchen.com.mm" class="credit-link">ting | Htet Aung Hlaing</a> | <a href="mailto:mpc.erp@pouchen.com.mm" class="credit-link">MM PCB IT Team</a>`;
 
-  const footerThemeGroup = document.createElement('div');
-  footerThemeGroup.className = 'login-footer-ctrl-group';
-  const footerThemeLabel = document.createElement('span');
-  footerThemeLabel.className = 'login-footer-ctrl-label';
-  footerThemeLabel.textContent = 'Theme:';
-  footerThemeGroup.appendChild(footerThemeLabel);
-  footerThemeGroup.appendChild(buildThemeSwitcher(getTheme, (th) => setTheme(th)));
-  footerControls.appendChild(footerThemeGroup);
-
-  const footerDivider = document.createElement('div');
-  footerDivider.className = 'login-ctrl-divider';
-  footerControls.appendChild(footerDivider);
-
-  const footerLangGroup = document.createElement('div');
-  footerLangGroup.className = 'login-footer-ctrl-group';
-  const footerLangLabel = document.createElement('span');
-  footerLangLabel.className = 'login-footer-ctrl-label';
-  footerLangLabel.textContent = 'Language:';
-  footerLangGroup.appendChild(footerLangLabel);
-  footerLangGroup.appendChild(buildLangSwitcher(getLocale, (l) => { setLocale(l); applyAll(); }));
-  footerControls.appendChild(footerLangGroup);
-
-  footer.appendChild(footerControls);
-
-  const footerLine = document.createElement('div');
-  footerLine.className = 'login-footer-line';
-  footerLine.textContent = '© Pouchen Myanmar Adidas B150 — Internal Use Only -- Developed by ting | Htet Aung Hlaing | MM PCB IT Team';
-  footer.appendChild(footerLine);
+  footer.appendChild(footerLine1);
+  footer.appendChild(footerLine2);
 
   page.appendChild(footer);
   container.appendChild(page);
@@ -483,15 +461,14 @@ function renderApp(container: HTMLElement): void {
   body.appendChild(contentWrap);
 
   // ── Tab bar ──
-  let activeTab: 1 | 2 | 3 = 1;
+  let activeTab: 1 | 2 = 1;
 
   const tabBar = document.createElement('div');
   tabBar.className = 'app-tab-bar';
 
-  const tabs: { id: 1 | 2 | 3; labelKey: string; icon: string }[] = [
+  const tabs: { id: 1 | 2; labelKey: string; icon: string }[] = [
     { id: 1, labelKey: 'upload.heading', icon: icons.uploadCloud },
-    { id: 2, labelKey: 'nav.config', icon: icons.settings },
-    { id: 3, labelKey: 'nav.liveExport', icon: icons.fileSpreadsheet },
+    { id: 2, labelKey: 'preview.heading', icon: icons.fileSpreadsheet },
   ];
 
   function renderTabs(): void {
@@ -536,9 +513,13 @@ function renderApp(container: HTMLElement): void {
     return card;
   }
 
-  // ── TAB 1: Upload ──
+  // ── TAB 1: Upload Files (Includes Groups, Export Mode, Rules) ──
   function buildUploadSection(): HTMLElement {
-    const card = sectionCard('1', 'upload.heading');
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'display:flex;flex-direction:column;gap:var(--space-5);';
+
+    // 1: Upload files
+    const uploadCard = sectionCard('1', 'upload.heading');
 
     const zone = document.createElement('div');
     zone.className = 'upload-zone';
@@ -568,7 +549,7 @@ function renderApp(container: HTMLElement): void {
     fileInput.type = 'file'; fileInput.multiple = true; fileInput.accept = '.xls,.xlsx';
     fileInput.className = 'sr-only'; fileInput.id = 'file-input';
     fileInput.setAttribute('aria-label', t('upload.dropHint'));
-    card.appendChild(fileInput);
+    uploadCard.appendChild(fileInput);
 
     zone.addEventListener('click', () => fileInput.click());
     zone.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') fileInput.click(); });
@@ -587,8 +568,8 @@ function renderApp(container: HTMLElement): void {
       if (files.length) { addFiles(files); fileInput.value = ''; }
     });
 
-    card.appendChild(zone);
-    card.appendChild(buildFileChips(uploadedFiles, (file) => {
+    uploadCard.appendChild(zone);
+    uploadCard.appendChild(buildFileChips(uploadedFiles, (file) => {
       uploadedFiles = uploadedFiles.filter((f) => f !== file);
       processFiles();
     }));
@@ -604,47 +585,71 @@ function renderApp(container: HTMLElement): void {
       fileStat.className = 'parse-summary-stat';
       fileStat.innerHTML = `<span data-i18n="upload.parsedFrom">${t('upload.parsedFrom')}</span> <span class="parse-summary-number">${uploadedFiles.length}</span> <span data-i18n="upload.files">${t('upload.files')}</span>`;
       summary.appendChild(fileStat);
-      card.appendChild(summary);
+      uploadCard.appendChild(summary);
     }
 
-    return card;
-  }
+    wrap.appendChild(uploadCard);
 
-  // ── TAB 2: Config (Groups + Export Mode + Rules) ──
-  function buildConfigSection(): HTMLElement {
-    const wrap = document.createElement('div');
-    wrap.className = 'sections-row';
+    // If files are uploaded, auto-show the next steps
+    if (uploadedFiles.length > 0) {
+      // Step 2: Group Code and Export Mode (horizontal layout, equal boxes)
+      const step2Row = document.createElement('div');
+      step2Row.style.cssText = 'display:flex;gap:var(--space-5);align-items:stretch;';
+      
+      const groupCard = sectionCard('2', 'groups.heading');
+      groupCard.style.flex = '1';
+      groupCard.appendChild(
+        buildGroupChecklist(getGroups(), selectedGroups, (newSet) => {
+          selectedGroups = newSet;
+          updateExportPreview();
+        })
+      );
+      step2Row.appendChild(groupCard);
 
-    // Left column: Groups checklist + Export Mode
-    const leftCol = document.createElement('div');
-    leftCol.style.cssText = 'display:flex;flex-direction:column;gap:var(--space-5);';
+      const modeCard = sectionCard('2', 'export.heading');
+      modeCard.style.flex = '1';
+      modeCard.appendChild(
+        buildExportModeCards(exportMode, (mode) => {
+          exportMode = mode;
+          updateExportPreview();
+        })
+      );
+      step2Row.appendChild(modeCard);
 
-    // Groups card
-    const groupCard = sectionCard('2.1', 'groups.heading');
-    groupCard.appendChild(
-      buildGroupChecklist(getGroups(), selectedGroups, (newSet) => {
-        selectedGroups = newSet;
-        updateExportPreview();
-      })
-    );
-    leftCol.appendChild(groupCard);
+      wrap.appendChild(step2Row);
 
-    // Export mode card (selection only — NO Generate/Download button)
-    const modeCard = sectionCard('2.2', 'export.heading');
-    modeCard.appendChild(
-      buildExportModeCards(exportMode, (mode) => {
-        exportMode = mode;
-        updateExportPreview();
-      })
-    );
-    leftCol.appendChild(modeCard);
+      // Rules Configuration (Optional button with folded animation)
+      const rulesWrap = document.createElement('div');
+      rulesWrap.className = 'rules-accordion';
 
-    wrap.appendChild(leftCol);
+      const rulesToggle = document.createElement('button');
+      rulesToggle.className = 'btn btn-secondary';
+      rulesToggle.style.cssText = 'width:auto;display:inline-flex;margin-top:var(--space-2);';
+      rulesToggle.innerHTML = `${icons.settings} <span data-i18n="nav.rulesConfig">${t('nav.rulesConfig') || 'Rules Configuration'}</span> ${icons.chevronDown}`;
+      rulesWrap.appendChild(rulesToggle);
 
-    // Right column: Rules config card
-    const rulesCard = sectionCard('⚙', 'nav.rulesConfig');
-    rulesCard.appendChild(buildRulesConfigPanel());
-    wrap.appendChild(rulesCard);
+      const rulesContent = document.createElement('div');
+      rulesContent.style.cssText = 'overflow:hidden;max-height:0;transition:max-height 0.3s ease;margin-top:var(--space-3);';
+      
+      const rulesCard = sectionCard('⚙', 'nav.rulesConfig');
+      rulesCard.appendChild(buildRulesConfigPanel());
+      rulesContent.appendChild(rulesCard);
+      rulesWrap.appendChild(rulesContent);
+
+      let rulesOpen = false;
+      rulesToggle.addEventListener('click', () => {
+        rulesOpen = !rulesOpen;
+        if (rulesOpen) {
+          rulesContent.style.maxHeight = '800px';
+          rulesToggle.innerHTML = `${icons.settings} <span data-i18n="nav.rulesConfig">${t('nav.rulesConfig') || 'Rules Configuration'}</span> ${icons.chevronUp}`;
+        } else {
+          rulesContent.style.maxHeight = '0';
+          rulesToggle.innerHTML = `${icons.settings} <span data-i18n="nav.rulesConfig">${t('nav.rulesConfig') || 'Rules Configuration'}</span> ${icons.chevronDown}`;
+        }
+      });
+
+      wrap.appendChild(rulesWrap);
+    }
 
     return wrap;
   }
@@ -736,74 +741,33 @@ function renderApp(container: HTMLElement): void {
     return panel;
   }
 
-  // ── TAB 3: Live & Export ──
-  function buildLiveExportSection(): HTMLElement {
+  // ── TAB 2: Preview ──
+  function buildPreviewSection(): HTMLElement {
     const wrap = document.createElement('div');
-    wrap.className = 'live-export-wrap';
+    wrap.className = 'preview-wrap';
+    
+    // Create callbacks to handle actions from the filter panel
+    const callbacks = {
+      onResetAll: resetAll,
+      onDownload: async (btn: HTMLButtonElement) => {
+        btn.disabled = true;
+        btn.innerHTML = `<span class="spinner"></span><span data-i18n="export.generating">${t('export.generating')}</span>`;
+        try {
+          await exportSelection(allRows, selectedGroups, exportMode, (msg) => showToast(msg, 'info'));
+          showToast(t('export.generate') + ' ✅', 'success');
+        } catch (e) { showToast(String(e), 'error'); }
+        btn.disabled = false;
+        btn.innerHTML = `${icons.download} <span data-i18n="export.generate">${t('export.generate')}</span>`;
+      }
+    };
 
-    // Export actions bar card with Generate & Download button
-    const exportCard = document.createElement('div');
-    exportCard.className = 'section-card';
-
-    const cardHdr = document.createElement('div');
-    cardHdr.className = 'section-header';
-    const badge = document.createElement('span');
-    badge.className = 'section-badge';
-    badge.textContent = '3';
-    const title = document.createElement('h2');
-    title.className = 'section-title';
-    title.setAttribute('data-i18n', 'export.heading');
-    title.textContent = t('export.heading');
-    cardHdr.appendChild(badge);
-    cardHdr.appendChild(title);
-    exportCard.appendChild(cardHdr);
-
-    const actionsBar = document.createElement('div');
-    actionsBar.className = 'export-actions';
-
-    const previewInfo = document.createElement('span');
-    previewInfo.className = 'export-preview-info';
-    previewInfo.id = 'export-preview-info';
-    previewInfo.textContent = buildExportPreviewInfo(allRows, selectedGroups, exportMode);
-    actionsBar.appendChild(previewInfo);
-
-    const actionRow = document.createElement('div');
-    actionRow.className = 'export-action-row';
-
-    const resetBtn = document.createElement('button');
-    resetBtn.type = 'button';
-    resetBtn.className = 'btn btn-danger btn-sm';
-    resetBtn.innerHTML = `${icons.rotateCcw} <span data-i18n="reset.button">${t('reset.button')}</span>`;
-    resetBtn.addEventListener('click', () => { if (confirm(t('reset.confirm'))) resetAll(); });
-    actionRow.appendChild(resetBtn);
-
-    const dlBtn = document.createElement('button');
-    dlBtn.id = 'export-btn';
-    dlBtn.type = 'button';
-    dlBtn.className = 'btn btn-primary';
-    dlBtn.innerHTML = `${icons.download} <span data-i18n="export.generate">${t('export.generate')}</span>`;
-    dlBtn.disabled = allRows.length === 0;
-    dlBtn.addEventListener('click', async () => {
-      dlBtn.disabled = true;
-      dlBtn.innerHTML = `<span class="spinner"></span><span data-i18n="export.generating">${t('export.generating')}</span>`;
-      try {
-        await exportSelection(allRows, selectedGroups, exportMode, (msg) => showToast(msg, 'info'));
-        showToast(t('export.generate') + ' ✅', 'success');
-      } catch (e) { showToast(String(e), 'error'); }
-      dlBtn.disabled = false;
-      dlBtn.innerHTML = `${icons.download} <span data-i18n="export.generate">${t('export.generate')}</span>`;
-    });
-    actionRow.appendChild(dlBtn);
-
-    actionsBar.appendChild(actionRow);
-    exportCard.appendChild(actionsBar);
-    wrap.appendChild(exportCard);
-
-    // Live Preview card
     const previewCard = sectionCard('👁', 'preview.heading');
+    previewCard.style.width = '100%';
+    previewCard.style.maxWidth = '100%';
+    
     const visibleRows = getVisibleRows();
     previewCard.appendChild(
-      buildLivePreviewSection(visibleRows, activeFilter, (f) => { activeFilter = f; })
+      buildLivePreviewSection(visibleRows, activeFilter, (f) => { activeFilter = f; }, callbacks)
     );
     wrap.appendChild(previewCard);
 
@@ -821,8 +785,7 @@ function renderApp(container: HTMLElement): void {
     stepWrap.className = 'step-process-container';
 
     if (activeTab === 1) stepWrap.appendChild(buildUploadSection());
-    else if (activeTab === 2) stepWrap.appendChild(buildConfigSection());
-    else if (activeTab === 3) stepWrap.appendChild(buildLiveExportSection());
+    else if (activeTab === 2) stepWrap.appendChild(buildPreviewSection());
 
     contentPanel.appendChild(stepWrap);
     applyAll();

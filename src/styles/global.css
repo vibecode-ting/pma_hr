@@ -160,7 +160,7 @@ h1, h2, h3, h4, h5 {
 .login-hero-bg {
   position: absolute;
   inset: 0;
-  background-image: url('./login-bg.jpeg');
+  background-image: url('/login-bg.jpeg');
   background-size: cover;
   background-position: center;
   transform: scale(1.03);

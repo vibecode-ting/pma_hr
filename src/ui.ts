@@ -584,7 +584,11 @@ export function buildPreviewTable(rows: AttendanceRow[]): HTMLElement {
 export function buildLivePreviewSection(
   rows: AttendanceRow[],
   activeFilter: LiveFilterState,
-  onFilterChange: (filter: LiveFilterState) => void
+  onFilterChange: (filter: LiveFilterState) => void,
+  callbacks?: {
+    onResetAll?: () => void;
+    onDownload?: (btn: HTMLButtonElement) => void;
+  }
 ): HTMLElement {
   const container = document.createElement('div');
   container.className = 'live-preview-container';
@@ -746,12 +750,13 @@ export function buildLivePreviewSection(
 
   panel.appendChild(grid);
 
-  // Reset filters button
+  // Reset filters & Download buttons
   const actions = document.createElement('div');
   actions.className = 'filter-actions';
+  actions.style.cssText = 'display:flex;gap:var(--space-3);align-items:center;margin-top:var(--space-3);';
 
   const clearBtn = document.createElement('button');
-  clearBtn.className = 'btn btn-secondary btn-sm';
+  clearBtn.className = 'btn btn-secondary';
   clearBtn.type = 'button';
   clearBtn.innerHTML = `${icons.rotateCcw} <span data-i18n="filter.clear">${t('filter.clear')}</span>`;
   clearBtn.addEventListener('click', () => {
@@ -762,6 +767,34 @@ export function buildLivePreviewSection(
     applyFilters();
   });
   actions.appendChild(clearBtn);
+
+  if (callbacks?.onResetAll) {
+    const hardResetBtn = document.createElement('button');
+    hardResetBtn.type = 'button';
+    hardResetBtn.className = 'btn btn-danger';
+    hardResetBtn.innerHTML = `${icons.fileX} <span data-i18n="reset.button">${t('reset.button')}</span>`;
+    hardResetBtn.addEventListener('click', () => {
+      if (confirm(t('reset.confirm'))) callbacks.onResetAll!();
+    });
+    actions.appendChild(hardResetBtn);
+  }
+
+  // Push download button to right
+  const spacer = document.createElement('div');
+  spacer.style.flex = '1';
+  actions.appendChild(spacer);
+
+  if (callbacks?.onDownload) {
+    const dlBtn = document.createElement('button');
+    dlBtn.id = 'export-btn';
+    dlBtn.type = 'button';
+    dlBtn.className = 'btn btn-primary';
+    dlBtn.style.cssText = 'font-weight:bold;font-size:1rem;padding:10px 24px;'; // Bold and colorful
+    dlBtn.innerHTML = `${icons.download} <span data-i18n="export.generate">${t('export.generate')}</span>`;
+    dlBtn.addEventListener('click', () => callbacks.onDownload!(dlBtn));
+    actions.appendChild(dlBtn);
+  }
+
   panel.appendChild(actions);
 
   container.appendChild(panel);
