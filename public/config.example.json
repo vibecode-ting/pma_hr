@@ -1,0 +1,11 @@
+{
+  "appTitle": "Pouchen Myanmar Adidas B150 | HR-Portal",
+  "accounts": [
+    { "username": "demo", "password": "demo123", "displayName": "Demo User" },
+    { "username": "hradmin", "password": "hradmin", "displayName": "HR Admin" }
+  ],
+  "resources": [
+    { "label": "APP Source Code", "url": "https://examplesourcecode.com" },
+    { "label": "Feedback the app", "url": "https://typeform.com" }
+  ]
+}

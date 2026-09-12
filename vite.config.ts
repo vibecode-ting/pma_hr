@@ -1,9 +1,7 @@
 import { defineConfig } from 'vite'
 
 export default defineConfig({
-  // TODO: Replace '<REPO_NAME>' with your actual GitHub repository name before deploying.
-  // Example: if your repo is https://github.com/youruser/hr-portal, set base: '/hr-portal/'
-  base: '/hr-err/',
+  base: process.env.BASE_PATH || './',
   build: {
     outDir: 'dist',
     target: 'es2020',

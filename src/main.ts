@@ -84,10 +84,38 @@ function clearSession(): void {
 
 // ─── Config fetch ─────────────────────────────────────────────────────────────
 
+const DEFAULT_CONFIG: AppConfig = {
+  appTitle: 'Pouchen Myanmar Adidas B150 | HR-Portal',
+  accounts: [
+    { username: 'demo', password: 'demo123', displayName: 'Demo User' },
+    { username: 'ingyin', password: 'Abc777', displayName: 'HR-Admin Ingyin' },
+    { username: 'nweni', password: 'Abc666', displayName: 'HR-Admin Nwe Ni' },
+    { username: 'it', password: 'admin', displayName: 'IT-PCB' }
+  ],
+  resources: [
+    { label: 'APP Source Code', url: 'https://examplesourcecode.com' },
+    { label: 'Feedback the app', url: 'https://typeform.com' },
+    { label: 'ting.hah@pouchen.com.mm', url: 'mailto:ting.hah@pouchen.com.mm' },
+    { label: 'mpc.erp@pouchen.com.mm', url: 'mailto:mpc.erp@pouchen.com.mm' }
+  ]
+};
+
 async function loadConfig(): Promise<AppConfig> {
-  const resp = await fetch('./config.json');
-  if (!resp.ok) throw new Error(`config.json fetch failed: ${resp.status}`);
-  return resp.json() as Promise<AppConfig>;
+  try {
+    const resp = await fetch('./config.json');
+    if (resp.ok) return await resp.json() as AppConfig;
+  } catch (e) {
+    console.warn('Could not load ./config.json:', e);
+  }
+
+  try {
+    const resp2 = await fetch('./config.example.json');
+    if (resp2.ok) return await resp2.json() as AppConfig;
+  } catch {
+    /* fallback to DEFAULT_CONFIG */
+  }
+
+  return DEFAULT_CONFIG;
 }
 
 async function loadRulesConfig(): Promise<void> {
@@ -138,6 +166,7 @@ function renderLogin(container: HTMLElement): void {
 
   const heroBg = document.createElement('div');
   heroBg.className = 'login-hero-bg';
+  heroBg.style.backgroundImage = "url('./login-bg.jpeg')";
   heroPane.appendChild(heroBg);
 
   const heroOverlay = document.createElement('div');
