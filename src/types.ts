@@ -59,6 +59,7 @@ export interface ResourceLink {
  * Schema for config.json (fetched at runtime, not bundled).
  */
 export interface AppConfig {
+  version?: string;
   appTitle: string;
   accounts: Array<{
     username: string;

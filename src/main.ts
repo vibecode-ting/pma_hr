@@ -98,16 +98,10 @@ function clearSession(): void {
 // ─── Config fetch ─────────────────────────────────────────────────────────────
 
 const DEFAULT_CONFIG: AppConfig = {
+  version: '1.0.0',
   appTitle: 'Pouchen Myanmar Adidas B150 | HR-Portal',
-  accounts: [
-    { username: 'demo', password: 'demo123', displayName: 'Demo User' },
-    { username: 'ingyin', password: 'Abc777', displayName: 'HR-Admin Ingyin' },
-    { username: 'nweni', password: 'Abc666', displayName: 'HR-Admin Nwe Ni' },
-    { username: 'it', password: 'admin', displayName: 'IT-PCB' }
-  ],
+  accounts: [],
   resources: [
-    { label: 'APP Source Code', url: 'https://examplesourcecode.com' },
-    { label: 'Feedback the app', url: 'https://typeform.com' },
     { label: 'ting.hah@pouchen.com.mm', url: 'mailto:ting.hah@pouchen.com.mm' },
     { label: 'mpc.erp@pouchen.com.mm', url: 'mailto:mpc.erp@pouchen.com.mm' }
   ]
@@ -122,7 +116,7 @@ async function loadConfig(): Promise<AppConfig> {
   }
 
   try {
-    const resp2 = await fetch('./config.example.json');
+    const resp2 = await fetch('/config.json');
     if (resp2.ok) return await resp2.json() as AppConfig;
   } catch {
     /* fallback to DEFAULT_CONFIG */
@@ -159,12 +153,13 @@ function renderLogin(container: HTMLElement): void {
   const page = document.createElement('div');
   page.className = 'page-wrapper login-split-page';
 
-  // ── Left Hero Panel: Unblurred Background Image & Corporate Branding ──
+  // ── Left Hero Panel: Unblurred Background Image & Glassy Branding ──
   const leftPanel = document.createElement('div');
   leftPanel.className = 'login-left-panel';
 
   const heroImage = document.createElement('div');
   heroImage.className = 'login-hero-image';
+  heroImage.style.backgroundImage = 'url("./login-bg.jpeg")';
   leftPanel.appendChild(heroImage);
 
   const heroScrim = document.createElement('div');
@@ -174,48 +169,35 @@ function renderLogin(container: HTMLElement): void {
   const heroContent = document.createElement('div');
   heroContent.className = 'login-hero-content';
 
-  const heroBadge = document.createElement('div');
-  heroBadge.className = 'login-hero-badge';
-  const heroLogo = document.createElement('img');
-  heroLogo.src = './pouchen_logo.png';
-  heroLogo.alt = 'Pouchen Logo';
-  heroLogo.className = 'login-hero-logo';
-  heroBadge.appendChild(heroLogo);
+  const glassCard = document.createElement('div');
+  glassCard.className = 'login-left-glass-card';
 
-  const heroCompany = document.createElement('span');
-  heroCompany.setAttribute('data-i18n', 'app.company');
-  heroCompany.textContent = t('app.company');
-  heroBadge.appendChild(heroCompany);
-  heroContent.appendChild(heroBadge);
+  const badgePill = document.createElement('div');
+  badgePill.className = 'login-left-badge';
+  badgePill.innerHTML = `<span class="badge-dot"></span><span>ADIDAS B150 HR-PORTAL</span>`;
+  glassCard.appendChild(badgePill);
 
-  const heroHeadline = document.createElement('h1');
-  heroHeadline.className = 'login-hero-headline';
-  heroHeadline.setAttribute('data-i18n', 'app.title');
-  heroHeadline.textContent = t('app.title');
-  heroContent.appendChild(heroHeadline);
+  const headline = document.createElement('h1');
+  headline.className = 'login-left-title';
+  headline.textContent = 'Pouchen | B150 HR-Portal';
+  glassCard.appendChild(headline);
 
+  const subline = document.createElement('p');
+  subline.className = 'login-left-subtext';
+  subline.textContent = 'Attendance & Shift Automation System';
+  glassCard.appendChild(subline);
+
+  heroContent.appendChild(glassCard);
   leftPanel.appendChild(heroContent);
   page.appendChild(leftPanel);
 
-  // ── Right Form Panel: Modern Login Controls & Form ──
+  // ── Right Form Panel: Controls, Glass Card & Form ──
   const rightPanel = document.createElement('div');
   rightPanel.className = 'login-right-panel';
 
-  // Panel Top: Brand on mobile + Theme & Language Switchers
+  // Panel Top: Theme & Language Switchers
   const panelTop = document.createElement('div');
   panelTop.className = 'login-panel-top';
-
-  const mobileBrand = document.createElement('div');
-  mobileBrand.className = 'login-panel-brand-mobile';
-  const mobileLogo = document.createElement('img');
-  mobileLogo.src = './pouchen_logo.png';
-  mobileLogo.alt = 'Pouchen Logo';
-  mobileBrand.appendChild(mobileLogo);
-  const mobileTitle = document.createElement('span');
-  mobileTitle.setAttribute('data-i18n', 'app.shortTitle');
-  mobileTitle.textContent = t('app.shortTitle');
-  mobileBrand.appendChild(mobileTitle);
-  panelTop.appendChild(mobileBrand);
 
   const topControls = document.createElement('div');
   topControls.className = 'login-top-controls';
@@ -229,24 +211,25 @@ function renderLogin(container: HTMLElement): void {
 
   rightPanel.appendChild(panelTop);
 
-  // Center Form Container
+  // Center Form Container with Glass & Shadows
   const formContainer = document.createElement('div');
-  formContainer.className = 'login-form-container';
+  formContainer.className = 'login-form-container login-glass-card';
 
+  // Form Header: Centered Logo & Centered APP Title
   const formHeader = document.createElement('div');
   formHeader.className = 'login-form-header';
 
-  const formTag = document.createElement('div');
-  formTag.className = 'login-form-tag';
-  formTag.setAttribute('data-i18n', 'app.shortTitle');
-  formTag.textContent = t('app.shortTitle');
-  formHeader.appendChild(formTag);
+  const rightLogo = document.createElement('img');
+  rightLogo.src = './pouchen_logo.png';
+  rightLogo.alt = 'Pouchen Logo';
+  rightLogo.className = 'login-right-logo';
+  formHeader.appendChild(rightLogo);
 
-  const formTitle = document.createElement('h2');
-  formTitle.className = 'login-form-title';
-  formTitle.setAttribute('data-i18n', 'login.submit');
-  formTitle.textContent = t('login.submit');
-  formHeader.appendChild(formTitle);
+  const rightAppTitle = document.createElement('h2');
+  rightAppTitle.className = 'login-right-app-title';
+  rightAppTitle.setAttribute('data-i18n', 'app.title');
+  rightAppTitle.textContent = t('app.title');
+  formHeader.appendChild(rightAppTitle);
 
   const formDesc = document.createElement('p');
   formDesc.className = 'login-form-desc';
@@ -405,6 +388,11 @@ function renderApp(container: HTMLElement): void {
   // ── Header Right: Live Ticking System Clock ──
   const headerRight = document.createElement('div');
   headerRight.className = 'app-header-right';
+
+  const versionBadge = document.createElement('span');
+  versionBadge.className = 'app-version-badge';
+  versionBadge.textContent = `v${appConfig?.version || '1.0.0'}`;
+  headerRight.appendChild(versionBadge);
 
   const clockEl = document.createElement('div');
   clockEl.className = 'app-live-clock';

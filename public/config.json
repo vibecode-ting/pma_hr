@@ -1,4 +1,5 @@
 {
+  "version": "1.0.0",
   "appTitle": "Pouchen Myanmar Adidas B150 | HR-Portal",
   "accounts": [
     { "username": "demo", "password": "demo123", "displayName": "Demo User" },
