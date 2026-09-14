@@ -1,36 +1,30 @@
 /**
- * rules.test.ts — Vitest unit tests for src/rules.ts
- *
- * Covers all 7 cases specified in plan.md's PROMPT 3.
+ * rules.test.ts — Unit tests for shift schedule logic, leave calculations, and OT rules.
  */
 
 import { describe, it, expect } from 'vitest';
 import {
   computeRemark,
   hhmmToMinutes,
-  computeLateHours,
-  GRACE_MINUTES,
-  REMARK_LATE_SUFFIX,
-  REMARK_NO_RECORD,
+  computeWorkMinutes,
+  parseLunchInterval,
+  DEFAULT_SHIFTS,
   REMARK_NO_CHECKOUT,
 } from './rules';
 import type { AttendanceRow } from './types';
 
-// ─── Helper to build a test AttendanceRow ────────────────────────────────────
-
 function makeRow(
-  standard: string,
   actual: string,
   overrides: Partial<AttendanceRow> = {}
 ): AttendanceRow {
   return {
     sourceFile: 'test.xls',
-    employeeId: 'TEST001',
-    name: 'Test Employee',
+    employeeId: '500830',
+    name: 'ျမင့္ျမင့္ရီ',
     groupCode: '0014',
     groupName: 'IT',
-    attendanceDate: '20260910',
-    standardTimeCard: standard,
+    attendanceDate: '20260909',
+    standardTimeCard: '0700,1200,1300,1600',
     actualTimeCard: actual,
     absent: '0',
     overtimeHours: '0',
@@ -40,88 +34,116 @@ function makeRow(
   };
 }
 
-// ─── hhmmToMinutes ───────────────────────────────────────────────────────────
-
 describe('hhmmToMinutes', () => {
-  it('converts "0700" to 420', () => expect(hhmmToMinutes('0700')).toBe(420));
-  it('converts "1830" to 1110', () => expect(hhmmToMinutes('1830')).toBe(1110));
-  it('returns null for blank', () => expect(hhmmToMinutes('    ')).toBeNull());
-  it('returns null for empty', () => expect(hhmmToMinutes('')).toBeNull());
-  it('returns null for non-numeric', () => expect(hhmmToMinutes('abcd')).toBeNull());
-  it('handles leading zeros', () => expect(hhmmToMinutes('0030')).toBe(30));
+  it('converts "07:00" and "0700" to 420', () => {
+    expect(hhmmToMinutes('07:00')).toBe(420);
+    expect(hhmmToMinutes('0700')).toBe(420);
+    expect(hhmmToMinutes('7:00')).toBe(420);
+  });
+  it('converts "16:00" to 960', () => expect(hhmmToMinutes('16:00')).toBe(960));
+  it('converts "00:00" to 0', () => expect(hhmmToMinutes('00:00')).toBe(0));
+  it('returns null for blank or invalid strings', () => {
+    expect(hhmmToMinutes('    ')).toBeNull();
+    expect(hhmmToMinutes('')).toBeNull();
+    expect(hhmmToMinutes('abc')).toBeNull();
+  });
 });
 
-// ─── computeLateHours ────────────────────────────────────────────────────────
+describe('computeWorkMinutes', () => {
+  const lunch = parseLunchInterval('11:30~12:30'); // 690 to 750
 
-describe('computeLateHours', () => {
-  it('22 minutes late → 0.36', () => expect(computeLateHours(22)).toBe(0.36));
-  it('12 minutes late → 0.2', () => expect(computeLateHours(12)).toBe(0.2));
-  it('11 minutes late → 0.18', () => expect(computeLateHours(11)).toBe(0.18));
-  it('60 minutes late → 1', () => expect(computeLateHours(60)).toBe(1));
-  it('1 minute late → 0.01', () => expect(computeLateHours(1)).toBe(0.01));
+  it('computes full work day minus lunch', () => {
+    // 07:00 to 16:00 (420 to 960) = 540 min elapsed, 60 min lunch = 480 min (8 hrs)
+    expect(computeWorkMinutes(420, 960, lunch)).toBe(480);
+  });
+
+  it('user arrives at 12:00 (missed work time before 12:00 excluding lunch)', () => {
+    // 07:00 to 12:00 = 300 min elapsed. Lunch overlap [11:30..12:00] = 30 min.
+    // Missed work = 270 min = 4.5 hours!
+    expect(computeWorkMinutes(420, 720, lunch)).toBe(270);
+  });
+
+  it('computes missed work for early out at 12:30', () => {
+    // End is 16:00 (960). Left at 12:30 (750).
+    // Lunch [690..750] doesn't overlap [750..960].
+    // Missed work = 960 - 750 = 210 min = 3.5 hours!
+    expect(computeWorkMinutes(750, 960, lunch)).toBe(210);
+  });
 });
 
-// ─── computeRemark — the 7 required test cases from plan.md ─────────────────
+describe('computeRemark - Shift Schedule Rules', () => {
+  const pastDate = '20260909';
+  const todayDate = '20260914';
 
-describe('computeRemark', () => {
-  // Case 1: 22 minutes late → "0.36 <suffix>"
-  it('22 minutes late → "0.36 ..."', () => {
-    const row = makeRow('0700,1200,1300,1600', '0722,0722,    ,    ');
-    expect(computeRemark(row)).toBe(`0.36 ${REMARK_LATE_SUFFIX}`);
+  it('10 minutes late → no remark (within grace period)', () => {
+    const row = makeRow('0710,1600', { attendanceDate: todayDate });
+    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate)).toBe('');
   });
 
-  // Case 2: 12 minutes late → "0.2 <suffix>"
-  it('12 minutes late → "0.2 ..."', () => {
-    const row = makeRow('0700,1200,1300,1600', '0712,0712,    ,    ');
-    expect(computeRemark(row)).toBe(`0.2 ${REMARK_LATE_SUFFIX}`);
+  it('11 minutes late → "( 11 မိနစ် ခွင့်တိုင်ရန် )"', () => {
+    const row = makeRow('0711,1600', { attendanceDate: todayDate });
+    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate)).toBe('( 11 မိနစ် ခွင့်တိုင်ရန် )');
   });
 
-  // Case 3: exactly 10 minutes late → no remark (within grace period)
-  it(`exactly ${GRACE_MINUTES} minutes late → no remark`, () => {
-    const row = makeRow('0700,1200,1300,1600', '0710,1200,1300,1600');
-    expect(computeRemark(row)).toBe('');
+  it('22 minutes late → "( 22 မိနစ် ခွင့်တိုင်ရန် )"', () => {
+    const row = makeRow('0722,1600', { attendanceDate: todayDate });
+    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate)).toBe('( 22 မိနစ် ခွင့်တိုင်ရန် )');
   });
 
-  // Case 4: exactly 11 minutes late → smallest non-zero remark
-  it('exactly 11 minutes late → "0.18 ..."', () => {
-    const row = makeRow('0700,1200,1300,1600', '0711,    ,    ,    ');
-    expect(computeRemark(row)).toBe(`0.18 ${REMARK_LATE_SUFFIX}`);
+  it('user shows up at 12:00 for Shift 11 (07:00 start, 11:30~12:30 lunch) → "( 4.5 နာရီ ခွင့်တိုင်ရန် )"', () => {
+    const row = makeRow('1200,1600', { klass: '11', attendanceDate: todayDate });
+    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate)).toBe('( 4.5 နာရီ ခွင့်တိုင်ရန် )');
   });
 
-  // Case 5: fully blank actual time card → REMARK_NO_RECORD
-  it('fully blank actual time card → NO_RECORD', () => {
-    const row = makeRow('0700,1200,1300,1600', '    ,    ,    ,    ');
-    expect(computeRemark(row)).toBe(REMARK_NO_RECORD);
+  it('completely blank actual card for 8h shift → "( 8 နာရီ ခွင့်တိုင်ရန် )"', () => {
+    const row = makeRow('    ,    ', { klass: '11', attendanceDate: todayDate });
+    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate)).toBe('( 8 နာရီ ခွင့်တိုင်ရန် )');
   });
 
-  // Case 6: check-in present, but last scheduled slot blank in actual → REMARK_NO_CHECKOUT
-  it('check-in present, last scheduled slot blank in actual → NO_CHECKOUT', () => {
-    // Has a check-in, last scheduled slot (1600) has no actual punch
-    const row = makeRow('0700,1200,1300,1600', '0700,1200,1300,    ');
-    expect(computeRemark(row)).toBe(REMARK_NO_CHECKOUT);
+  it('completely blank actual card for 4h shift (Shift 13 Sat) → "( 4 နာရီ ခွင့်တိုင်ရန် )"', () => {
+    const row = makeRow('    ,    ', { klass: '13', attendanceDate: todayDate });
+    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate)).toBe('( 4 နာရီ ခွင့်တိုင်ရန် )');
   });
 
-  // Case 7: normal on-time, complete day → ""
-  it('normal on-time, complete day → ""', () => {
-    const row = makeRow('0700,1200,1300,1600', '0700,1200,1300,1600');
-    expect(computeRemark(row)).toBe('');
+  it('uploading today date with only check-in punch → does NOT write missing checkout remark', () => {
+    // Punch at 06:49, no checkout yet, date is today
+    const row = makeRow('0649,        ', { attendanceDate: todayDate });
+    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate)).toBe('');
   });
 
-  // Bonus: early arrival → no remark
-  it('early arrival (negative lateMinutes) → ""', () => {
-    const row = makeRow('0700,1200,1300,1600', '0655,1200,1300,1600');
-    expect(computeRemark(row)).toBe('');
+  it('uploading past date with only check-in punch → writes missing checkout remark', () => {
+    // Punch at 06:49, no checkout, date is past
+    const row = makeRow('0649,        ', { attendanceDate: pastDate });
+    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate)).toBe(REMARK_NO_CHECKOUT);
   });
 
-  // Bonus: malformed actual time (non-numeric) → gracefully skip late check, fall through
-  it('malformed actual time → does not throw', () => {
-    const row = makeRow('0700,1200', 'XXXX,1200');
-    expect(() => computeRemark(row)).not.toThrow();
+  it('checkout at 15:50 (10 min early) → safe (within early out grace)', () => {
+    const row = makeRow('0655,1550', { attendanceDate: todayDate });
+    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate)).toBe('');
   });
 
-  // Bonus: NO_RECORD takes precedence over late check (all blank)
-  it('NO_RECORD has higher precedence than late check-in (all blanks wins)', () => {
-    const row = makeRow('0700,1200,1300,1600', '    ,    ,    ,    ');
-    expect(computeRemark(row)).toBe(REMARK_NO_RECORD);
+  it('checkout at 15:49 (11 min early) → "( 11 မိနစ် ခွင့်တိုင်ရန် )"', () => {
+    const row = makeRow('0655,1549', { attendanceDate: todayDate });
+    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate)).toBe('( 11 မိနစ် ခွင့်တိုင်ရန် )');
+  });
+
+  it('early checkout half-day at 12:30 → "( 3.5 နာရီ ခွင့်တိုင်ရန် )"', () => {
+    const row = makeRow('0655,1230', { attendanceDate: todayDate });
+    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate)).toBe('( 3.5 နာရီ ခွင့်တိုင်ရန် )');
+  });
+
+  it('overtime punch at 16:25 (25m past 16:00, col R empty) → "( 0.5 hour အိုတီ တင်ရန် )"', () => {
+    const row = makeRow('0655,1625', { attendanceDate: todayDate, overtimeHours: '0' });
+    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate)).toBe('( 0.5 hour အိုတီ တင်ရန် )');
+  });
+
+  it('overtime punch at 17:00 (60m past 16:00, col R empty) → "( 1 hour အိုတီ တင်ရန် )"', () => {
+    const row = makeRow('0655,1700', { attendanceDate: todayDate, overtimeHours: '0' });
+    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate)).toBe('( 1 hour အိုတီ တင်ရန် )');
+  });
+
+  it('overtime punch present, but overtimeHours already has value in Col R → no OT remark', () => {
+    const row = makeRow('0655,1630', { attendanceDate: todayDate, overtimeHours: '0.5' });
+    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate)).toBe('');
   });
 });

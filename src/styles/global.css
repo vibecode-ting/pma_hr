@@ -513,6 +513,40 @@ h1, h2, h3, h4, h5 {
   flex-shrink: 0;
 }
 
+.app-live-clock {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px 14px;
+  background: var(--bg-panel-raised);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.app-live-clock .clock-icon {
+  color: var(--gold-500);
+  display: flex;
+  align-items: center;
+}
+
+.app-live-clock .clock-time {
+  color: var(--gold-400);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.5px;
+}
+
+.app-live-clock .clock-date {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  border-left: 1px solid var(--border-hairline);
+  padding-left: var(--space-2);
+}
+
 .app-header-user {
   font-size: 0.85rem;
   font-weight: 500;

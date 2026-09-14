@@ -230,10 +230,6 @@ function parseSheet(
     // Skip rows where all meaningful fields are blank
     if (!employeeId && !name && !groupCode && !attendanceDate) continue;
 
-    // Requirement #2: "My app logic need to catch only where this values is greather than 0 ."
-    const absentNum = parseFloat(absent);
-    if (isNaN(absentNum) || absentNum <= 0) continue;
-
     const otCell = getCell('Overtime hours');
     const overtimeHours = cellToString(otCell).trim() || '0';
 

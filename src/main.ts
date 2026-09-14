@@ -11,7 +11,16 @@ import './styles/global.css';
 import { initLocale, setLocale, getLocale, applyAll, t } from './i18n';
 import type { AppConfig, AttendanceRow, ExportMode, SessionData, Theme, LiveFilterState, RulesConfig } from './types';
 import { parseAllFiles } from './parse';
-import { applyRemarks } from './rules';
+import {
+  applyRemarks,
+  DEFAULT_SHIFTS,
+  GRACE_MINUTES,
+  EARLY_OUT_GRACE_MINUTES,
+  OT_THRESHOLD_MINUTES,
+  REMARK_LATE_SUFFIX,
+  REMARK_NO_RECORD,
+  REMARK_NO_CHECKOUT,
+} from './rules';
 import { exportSelection } from './export';
 import {
   createStarfield,
@@ -36,12 +45,15 @@ import type { GroupInfo } from './ui';
 
 let appConfig: AppConfig | null = null;
 let defaultRulesConfig: RulesConfig = {
-  graceMinutes: 10,
-  remarkLateSuffix: 'ခွင့်တိုင်ရန်။',
-  remarkNoRecord: 'တိုင်းကာဒ်မရှိပါ။',
-  remarkNoCheckout: 'အထွက်တိုင်းကာဒ်မရှိပါ။',
+  graceMinutes: GRACE_MINUTES,
+  earlyOutGraceMinutes: EARLY_OUT_GRACE_MINUTES,
+  otThresholdMinutes: OT_THRESHOLD_MINUTES,
+  remarkLateSuffix: REMARK_LATE_SUFFIX,
+  remarkNoRecord: REMARK_NO_RECORD,
+  remarkNoCheckout: REMARK_NO_CHECKOUT,
+  shifts: JSON.parse(JSON.stringify(DEFAULT_SHIFTS)),
 };
-let rulesConfig: RulesConfig = { ...defaultRulesConfig };
+let rulesConfig: RulesConfig = JSON.parse(JSON.stringify(defaultRulesConfig));
 let allRows: AttendanceRow[] = [];
 let uploadedFiles: File[] = [];
 let selectedGroups: Set<string> = new Set();
@@ -124,12 +136,15 @@ async function loadRulesConfig(): Promise<void> {
     if (resp.ok) {
       const data = await resp.json() as Partial<RulesConfig>;
       defaultRulesConfig = {
-        graceMinutes: typeof data.graceMinutes === 'number' ? data.graceMinutes : 10,
-        remarkLateSuffix: data.remarkLateSuffix ?? data.remarkLate ?? 'ခွင့်တိုင်ရန်။',
-        remarkNoRecord: data.remarkNoRecord ?? 'တိုင်းကာဒ်မရှိပါ။',
-        remarkNoCheckout: data.remarkNoCheckout ?? 'အထွက်တိုင်းကာဒ်မရှိပါ။',
+        graceMinutes: typeof data.graceMinutes === 'number' ? data.graceMinutes : GRACE_MINUTES,
+        earlyOutGraceMinutes: typeof data.earlyOutGraceMinutes === 'number' ? data.earlyOutGraceMinutes : EARLY_OUT_GRACE_MINUTES,
+        otThresholdMinutes: typeof data.otThresholdMinutes === 'number' ? data.otThresholdMinutes : OT_THRESHOLD_MINUTES,
+        remarkLateSuffix: data.remarkLateSuffix ?? data.remarkLate ?? REMARK_LATE_SUFFIX,
+        remarkNoRecord: data.remarkNoRecord ?? REMARK_NO_RECORD,
+        remarkNoCheckout: data.remarkNoCheckout ?? REMARK_NO_CHECKOUT,
+        shifts: Array.isArray(data.shifts) && data.shifts.length > 0 ? data.shifts : JSON.parse(JSON.stringify(DEFAULT_SHIFTS)),
       };
-      rulesConfig = { ...defaultRulesConfig };
+      rulesConfig = JSON.parse(JSON.stringify(defaultRulesConfig));
     }
   } catch { /* use defaults */ }
 }
@@ -390,6 +405,26 @@ function renderApp(container: HTMLElement): void {
   headerLeft.appendChild(appTitleEl);
 
   header.appendChild(headerLeft);
+
+  // ── Header Right: Live Ticking System Clock ──
+  const headerRight = document.createElement('div');
+  headerRight.className = 'app-header-right';
+
+  const clockEl = document.createElement('div');
+  clockEl.className = 'app-live-clock';
+  clockEl.id = 'app-live-clock';
+
+  const updateClock = () => {
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const dateStr = now.toLocaleDateString([], { year: 'numeric', month: '2-digit', day: '2-digit' });
+    clockEl.innerHTML = `<span class="clock-icon">${icons.calendar || '🕒'}</span> <span class="clock-time">${timeStr}</span> <span class="clock-date">${dateStr}</span>`;
+  };
+  updateClock();
+  const clockInterval = setInterval(updateClock, 1000);
+
+  headerRight.appendChild(clockEl);
+  header.appendChild(headerRight);
   pageWrapper.appendChild(header);
 
   // ── Body: sidebar + content ──
@@ -485,7 +520,11 @@ function renderApp(container: HTMLElement): void {
   const logoutBtn = document.createElement('button');
   logoutBtn.className = 'sidebar-action-btn sidebar-logout-btn';
   logoutBtn.innerHTML = `${icons.logOut} <span>${t('nav.logout')}</span>`;
-  logoutBtn.addEventListener('click', () => { clearSession(); renderLogin(container); });
+  logoutBtn.addEventListener('click', () => {
+    clearInterval(clockInterval);
+    clearSession();
+    renderLogin(container);
+  });
   sidebar.appendChild(logoutBtn);
 
   body.appendChild(sidebar);
@@ -675,7 +714,7 @@ function renderApp(container: HTMLElement): void {
       rulesToggle.addEventListener('click', () => {
         rulesOpen = !rulesOpen;
         if (rulesOpen) {
-          rulesContent.style.maxHeight = '800px';
+          rulesContent.style.maxHeight = '3000px';
           rulesToggle.innerHTML = `${icons.settings} <span data-i18n="nav.rulesConfig">${t('nav.rulesConfig') || 'Rules Configuration'}</span> ${icons.chevronUp}`;
         } else {
           rulesContent.style.maxHeight = '0';
@@ -695,8 +734,15 @@ function renderApp(container: HTMLElement): void {
 
     const inputs: Record<string, HTMLInputElement> = {};
 
+    const reapplyRulesAndRefresh = () => {
+      if (allRows.length > 0) {
+        applyRemarks(allRows, undefined, rulesConfig);
+        updateExportPreview();
+      }
+    };
+
     const field = (
-      key: 'graceMinutes' | 'remarkLateSuffix' | 'remarkNoRecord' | 'remarkNoCheckout',
+      key: 'graceMinutes' | 'earlyOutGraceMinutes' | 'otThresholdMinutes' | 'remarkLateSuffix' | 'remarkNoRecord' | 'remarkNoCheckout',
       id: string,
       labelText: string,
       type: 'text' | 'number' = 'text'
@@ -712,7 +758,7 @@ function renderApp(container: HTMLElement): void {
       inp.type = type;
       inp.id = id;
       inp.className = 'form-input rules-input';
-      inp.value = String(rulesConfig[key]);
+      inp.value = String(rulesConfig[key] ?? '');
       if (type === 'number') {
         inp.min = '0';
         inp.max = '120';
@@ -723,13 +769,14 @@ function renderApp(container: HTMLElement): void {
         const v = inp.value.trim();
         if (key === 'graceMinutes') {
           rulesConfig.graceMinutes = Math.max(0, parseInt(v, 10) || 0);
+        } else if (key === 'earlyOutGraceMinutes') {
+          rulesConfig.earlyOutGraceMinutes = Math.max(0, parseInt(v, 10) || 0);
+        } else if (key === 'otThresholdMinutes') {
+          rulesConfig.otThresholdMinutes = Math.max(0, parseInt(v, 10) || 0);
         } else {
           rulesConfig[key] = v;
         }
-        if (allRows.length > 0) {
-          applyRemarks(allRows, undefined, rulesConfig);
-          updateExportPreview();
-        }
+        reapplyRulesAndRefresh();
       };
 
       inp.addEventListener('input', updateVal);
@@ -740,29 +787,187 @@ function renderApp(container: HTMLElement): void {
       return g;
     };
 
-    panel.appendChild(field('graceMinutes', 'rule-grace', 'Grace Period (minutes)', 'number'));
-    panel.appendChild(field('remarkLateSuffix', 'rule-late', 'Late Check-in Remark (Myanmar / Unicode)'));
-    panel.appendChild(field('remarkNoRecord', 'rule-norecord', 'No Record Remark (Myanmar / Unicode)'));
-    panel.appendChild(field('remarkNoCheckout', 'rule-nocheckout', 'No Check-out Remark (Myanmar / Unicode)'));
+    // General thresholds & remarks grid
+    const grid = document.createElement('div');
+    grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:var(--space-3);margin-bottom:var(--space-4);';
+    grid.appendChild(field('graceMinutes', 'rule-grace', 'Check-in Grace (Minutes)', 'number'));
+    grid.appendChild(field('earlyOutGraceMinutes', 'rule-early-grace', 'Early Out Grace (Minutes)', 'number'));
+    grid.appendChild(field('otThresholdMinutes', 'rule-ot-threshold', 'OT Threshold (Minutes past end)', 'number'));
+    grid.appendChild(field('remarkLateSuffix', 'rule-late', 'Late Check-in Suffix'));
+    grid.appendChild(field('remarkNoRecord', 'rule-norecord', 'No Punch / Absent Remark'));
+    grid.appendChild(field('remarkNoCheckout', 'rule-nocheckout', 'Missing Checkout Remark (Past Dates)'));
+    panel.appendChild(grid);
 
+    // Shift Schedule Section
+    const shiftSec = document.createElement('div');
+    shiftSec.className = 'shift-config-container';
+
+    const shiftHeader = document.createElement('div');
+    shiftHeader.className = 'shift-config-header';
+
+    const shiftTitle = document.createElement('div');
+    shiftTitle.className = 'shift-config-title';
+    shiftTitle.innerHTML = `<span style="display:inline-flex;align-items:center;gap:6px;">${icons.calendar || '📅'} <span>Shift Schedules (Matched by Excel "Class" Column)</span></span>`;
+    shiftHeader.appendChild(shiftTitle);
+
+    const addShiftBtn = document.createElement('button');
+    addShiftBtn.type = 'button';
+    addShiftBtn.className = 'btn btn-secondary btn-sm';
+    addShiftBtn.innerHTML = `+ Add Shift`;
+    addShiftBtn.addEventListener('click', () => {
+      const newShiftNo = prompt('Enter Shift No / Class (e.g. 99):');
+      if (!newShiftNo) return;
+      rulesConfig.shifts.push({
+        shiftNo: newShiftNo.trim(),
+        shiftName: 'Custom Shift',
+        startTime: '07:00',
+        lunchTime: '11:30~12:30',
+        endTime: '16:00',
+      });
+      rebuildShiftTable();
+      reapplyRulesAndRefresh();
+      showToast(`Shift ${newShiftNo} added`, 'success');
+    });
+    shiftHeader.appendChild(addShiftBtn);
+    shiftSec.appendChild(shiftHeader);
+
+    const tableWrap = document.createElement('div');
+    tableWrap.className = 'shift-table-wrap';
+
+    const table = document.createElement('table');
+    table.className = 'shift-table';
+    table.innerHTML = `
+      <thead>
+        <tr>
+          <th>Class (Shift No)</th>
+          <th>Shift Name</th>
+          <th>Start Time</th>
+          <th>Lunch Time</th>
+          <th>Get Off Work</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    `;
+    const tbody = table.querySelector('tbody')!;
+
+    const rebuildShiftTable = () => {
+      tbody.innerHTML = '';
+      rulesConfig.shifts.forEach((s, idx) => {
+        const tr = document.createElement('tr');
+
+        // Shift no
+        const tdNo = document.createElement('td');
+        const inpNo = document.createElement('input');
+        inpNo.className = 'shift-input';
+        inpNo.value = s.shiftNo;
+        inpNo.style.maxWidth = '65px';
+        inpNo.addEventListener('change', () => {
+          s.shiftNo = inpNo.value.trim();
+          reapplyRulesAndRefresh();
+        });
+        tdNo.appendChild(inpNo);
+        tr.appendChild(tdNo);
+
+        // Shift name
+        const tdName = document.createElement('td');
+        const inpName = document.createElement('input');
+        inpName.className = 'shift-input';
+        inpName.value = s.shiftName;
+        inpName.style.maxWidth = '190px';
+        inpName.addEventListener('change', () => {
+          s.shiftName = inpName.value.trim();
+        });
+        tdName.appendChild(inpName);
+        tr.appendChild(tdName);
+
+        // Start time
+        const tdStart = document.createElement('td');
+        const inpStart = document.createElement('input');
+        inpStart.className = 'shift-input';
+        inpStart.value = s.startTime;
+        inpStart.style.maxWidth = '75px';
+        inpStart.placeholder = '07:00';
+        inpStart.addEventListener('change', () => {
+          s.startTime = inpStart.value.trim();
+          reapplyRulesAndRefresh();
+        });
+        tdStart.appendChild(inpStart);
+        tr.appendChild(tdStart);
+
+        // Lunch time
+        const tdLunch = document.createElement('td');
+        const inpLunch = document.createElement('input');
+        inpLunch.className = 'shift-input';
+        inpLunch.value = s.lunchTime;
+        inpLunch.style.maxWidth = '115px';
+        inpLunch.placeholder = '11:30~12:30';
+        inpLunch.addEventListener('change', () => {
+          s.lunchTime = inpLunch.value.trim();
+          reapplyRulesAndRefresh();
+        });
+        tdLunch.appendChild(inpLunch);
+        tr.appendChild(tdLunch);
+
+        // End time
+        const tdEnd = document.createElement('td');
+        const inpEnd = document.createElement('input');
+        inpEnd.className = 'shift-input';
+        inpEnd.value = s.endTime;
+        inpEnd.style.maxWidth = '75px';
+        inpEnd.placeholder = '16:00';
+        inpEnd.addEventListener('change', () => {
+          s.endTime = inpEnd.value.trim();
+          reapplyRulesAndRefresh();
+        });
+        tdEnd.appendChild(inpEnd);
+        tr.appendChild(tdEnd);
+
+        // Action: Delete
+        const tdAct = document.createElement('td');
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.className = 'btn btn-secondary btn-sm';
+        delBtn.style.padding = '2px 8px';
+        delBtn.innerHTML = '✕';
+        delBtn.title = 'Delete Shift';
+        delBtn.addEventListener('click', () => {
+          rulesConfig.shifts.splice(idx, 1);
+          rebuildShiftTable();
+          reapplyRulesAndRefresh();
+        });
+        tdAct.appendChild(delBtn);
+        tr.appendChild(tdAct);
+
+        tbody.appendChild(tr);
+      });
+    };
+
+    rebuildShiftTable();
+    tableWrap.appendChild(table);
+    shiftSec.appendChild(tableWrap);
+    panel.appendChild(shiftSec);
+
+    // Actions row: Reset to defaults
     const actionsRow = document.createElement('div');
     actionsRow.className = 'rules-actions-row';
+    actionsRow.style.marginTop = 'var(--space-4)';
 
     const resetRulesBtn = document.createElement('button');
     resetRulesBtn.type = 'button';
     resetRulesBtn.className = 'btn btn-secondary btn-sm';
-    resetRulesBtn.innerHTML = `${icons.rotateCcw} <span>Reset to defaults</span>`;
+    resetRulesBtn.innerHTML = `${icons.rotateCcw} <span>Reset all rules & shifts to defaults</span>`;
     resetRulesBtn.addEventListener('click', () => {
-      rulesConfig = { ...defaultRulesConfig };
+      rulesConfig = JSON.parse(JSON.stringify(defaultRulesConfig));
       if (inputs.graceMinutes) inputs.graceMinutes.value = String(rulesConfig.graceMinutes);
+      if (inputs.earlyOutGraceMinutes) inputs.earlyOutGraceMinutes.value = String(rulesConfig.earlyOutGraceMinutes);
+      if (inputs.otThresholdMinutes) inputs.otThresholdMinutes.value = String(rulesConfig.otThresholdMinutes);
       if (inputs.remarkLateSuffix) inputs.remarkLateSuffix.value = rulesConfig.remarkLateSuffix;
       if (inputs.remarkNoRecord) inputs.remarkNoRecord.value = rulesConfig.remarkNoRecord;
       if (inputs.remarkNoCheckout) inputs.remarkNoCheckout.value = rulesConfig.remarkNoCheckout;
-      if (allRows.length > 0) {
-        applyRemarks(allRows, undefined, rulesConfig);
-        updateExportPreview();
-      }
-      showToast('Rules reset to defaults ✅', 'success');
+      rebuildShiftTable();
+      reapplyRulesAndRefresh();
+      showToast('All rules and shifts reset to defaults ✅', 'success');
     });
     actionsRow.appendChild(resetRulesBtn);
 
@@ -770,7 +975,7 @@ function renderApp(container: HTMLElement): void {
 
     const note = document.createElement('p');
     note.className = 'rules-note';
-    note.textContent = 'Myanmar text must be Unicode (Noto Sans Myanmar). Defaults loaded from rules.json.';
+    note.textContent = 'Shift schedule matches the "Class" column in uploaded Excel files. Defaults loaded from rules.json.';
     panel.appendChild(note);
 
     return panel;
@@ -866,7 +1071,15 @@ function renderApp(container: HTMLElement): void {
     const warnings: string[] = [];
     applyRemarks(rows, (msg) => warnings.push(msg), rulesConfig);
     parseWarnings = warnings;
-    allRows = rows;
+    allRows = rows.filter((r) => {
+      const absentNum = parseFloat(r.absent);
+      const otNum = parseFloat(r.overtimeHours);
+      return (
+        (!isNaN(absentNum) && absentNum > 0) ||
+        (!isNaN(otNum) && otNum > 0) ||
+        (r.remarks && r.remarks.trim() !== '')
+      );
+    });
     const groups = getGroups();
     selectedGroups = new Set(groups.map((g) => g.code));
     rerender();

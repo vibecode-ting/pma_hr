@@ -109,15 +109,26 @@ export interface ParseResult {
  */
 export type ExportMode = 'per-group' | 'combined' | 'per-source-file';
 
+export interface ShiftConfig {
+  shiftNo: string;
+  shiftName: string;
+  startTime: string;
+  lunchTime: string;
+  endTime: string;
+}
+
 /**
  * Runtime-configurable rule thresholds and remark strings.
  * Loaded from /rules.json at startup; falls back to hardcoded defaults.
  */
 export interface RulesConfig {
   graceMinutes: number;
+  earlyOutGraceMinutes: number;
+  otThresholdMinutes: number;
   remarkLateSuffix: string;
   remarkNoRecord: string;
   remarkNoCheckout: string;
   remarkLate?: string;
+  shifts: ShiftConfig[];
 }
 
