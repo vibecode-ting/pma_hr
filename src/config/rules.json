@@ -1,6 +1,11 @@
 {
   "graceMinutes": 10,
-  "remarkLateSuffix": "ခွင့်တိုင်ရန်။",
-  "remarkNoRecord": "တိုင်းကဒ်မရှိပါ။",
-  "remarkNoCheckout": "အထွက်တိုင်းကဒ်မရှိပါ။"
+  "earlyOutGraceMinutes": 10,
+  "otThresholdMinutes": 20,
+  "remarkLateSuffix": "ခွင့်တိုင်ရန်",
+  "remarkNoRecord": "( 8 နာရီ ခွင့်တိုင်ရန် )",
+  "remarkLeaveApplied": "ခွင့်တိုင်ပြီး",
+  "remarkNoCheckout": "",
+  "remarkOtSuffix": "hour အိုတီတင်ရန်",
+  "remarkOtApplied": "အိုတီတင်ပီး"
 }

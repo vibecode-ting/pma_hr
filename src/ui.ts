@@ -14,6 +14,7 @@ import {
   REMARK_NO_CHECKOUT,
   REMARK_LATE_SUFFIX,
   GRACE_MINUTES,
+  isRowResolved,
 } from './rules';
 
 // ─── Lucide SVG icon strings ──────────────────────────────────────────────────
@@ -649,9 +650,25 @@ export function buildLivePreviewSection(
   panelTitle.innerHTML = `${icons.filter} <span data-i18n="filter.title">${t('filter.title')}</span>`;
   panelHeader.appendChild(panelTitle);
 
+  const filterControlsWrap = document.createElement('div');
+  filterControlsWrap.style.cssText = 'display:flex;align-items:center;gap:var(--space-3);';
+
+  const hideResolvedLabel = document.createElement('label');
+  hideResolvedLabel.className = 'filter-hide-resolved-label';
+  const hideResolvedCheckbox = document.createElement('input');
+  hideResolvedCheckbox.type = 'checkbox';
+  hideResolvedCheckbox.id = 'filter-hide-resolved';
+  hideResolvedCheckbox.checked = activeFilter.hideResolved !== false;
+  const hideResolvedText = document.createElement('span');
+  hideResolvedText.textContent = 'Hide OK / Fixed rows';
+  hideResolvedLabel.appendChild(hideResolvedCheckbox);
+  hideResolvedLabel.appendChild(hideResolvedText);
+  filterControlsWrap.appendChild(hideResolvedLabel);
+
   const filterBadge = document.createElement('div');
   filterBadge.className = 'filter-panel-badge';
-  panelHeader.appendChild(filterBadge);
+  filterControlsWrap.appendChild(filterBadge);
+  panelHeader.appendChild(filterControlsWrap);
   panel.appendChild(panelHeader);
 
   // 8-column compact filter grid
@@ -857,9 +874,10 @@ export function buildLivePreviewSection(
     { value: '', label: `— All —` },
     { value: '__HAS_REMARK__', label: t('filter.withRemarks') || 'With Remarks' },
     { value: '__NO_REMARK__', label: t('filter.noRemarks') || 'No Remarks' },
-    { value: 'ခွင့်တိုင်ရန်', label: 'ခွင့်တိုင်ရန် (Leave)' },
-    { value: 'အိုတီ', label: 'အိုတီ (Overtime)' },
-    { value: 'တိုင်းကာဒ်မရှိ', label: 'တိုင်းကာဒ်မရှိ (No punch)' },
+    { value: 'ခွင့်တိုင်ရန်', label: 'ခွင့်တိုင်ရန် (Need Leave)' },
+    { value: 'ခွင့်တိုင်ပြီး', label: 'ခွင့်တိုင်ပြီး (Leave Applied)' },
+    { value: 'အိုတီတင်ရန်', label: 'အိုတီတင်ရန် (Need OT)' },
+    { value: 'အိုတီတင်ပီး', label: 'အိုတီတင်ပီး (OT Applied)' },
   ];
 
   for (const c of remChoices) {
@@ -891,6 +909,7 @@ export function buildLivePreviewSection(
     absSelect.value = '';
     otSelect.value = '';
     remSelect.value = '';
+    hideResolvedCheckbox.checked = true;
     applyFilters();
   });
   actions.appendChild(clearBtn);
@@ -931,6 +950,7 @@ export function buildLivePreviewSection(
 
   // ── Filter evaluation ──
   const applyFilters = () => {
+    const isHideResolved = hideResolvedCheckbox.checked;
     const current: LiveFilterState = {
       idNo: idInput.value.trim(),
       name: nameInput.value.trim(),
@@ -940,13 +960,17 @@ export function buildLivePreviewSection(
       absent: absSelect.value.trim(),
       overtime: otSelect.value.trim(),
       remarks: remSelect.value.trim(),
+      hideResolved: isHideResolved,
     };
 
     const hasActiveFilter = Boolean(
-      current.idNo || current.name || current.groupCode || current.date || current.klass || current.absent || current.overtime || current.remarks
+      current.idNo || current.name || current.groupCode || current.date || current.klass || current.absent || current.overtime || current.remarks || !isHideResolved
     );
 
     const filtered = rows.filter((r) => {
+      if (isHideResolved && isRowResolved(r)) {
+        return false;
+      }
       if (current.idNo && !r.employeeId.toLowerCase().includes(current.idNo.toLowerCase())) {
         return false;
       }
@@ -986,7 +1010,9 @@ export function buildLivePreviewSection(
     });
 
     // Update row count badge
-    if (!hasActiveFilter) {
+    if (!hasActiveFilter && isHideResolved) {
+      filterBadge.textContent = `${filtered.length} pending error rows (${rows.length - filtered.length} OK hidden)`;
+    } else if (!hasActiveFilter) {
       filterBadge.textContent = t('preview.showingAll', { count: rows.length });
     } else {
       filterBadge.textContent = t('preview.showingFiltered', {
@@ -1001,6 +1027,8 @@ export function buildLivePreviewSection(
 
     onFilterChange(current);
   };
+
+  hideResolvedCheckbox.addEventListener('change', applyFilters);
 
   idInput.addEventListener('input', applyFilters);
   idInput.addEventListener('change', applyFilters);

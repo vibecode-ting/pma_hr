@@ -15,8 +15,10 @@ export const OT_THRESHOLD_MINUTES = 20;
 
 export const REMARK_LATE_SUFFIX = 'ခွင့်တိုင်ရန်';
 export const REMARK_NO_RECORD = '( 8 နာရီ ခွင့်တိုင်ရန် )';
+export const REMARK_LEAVE_APPLIED = 'ခွင့်တိုင်ပြီး';
 export const REMARK_NO_CHECKOUT = '';
-export const REMARK_OT_SUFFIX = 'hour အိုတီ တင်ရန်';
+export const REMARK_OT_SUFFIX = 'hour အိုတီတင်ရန်';
+export const REMARK_OT_APPLIED = 'အိုတီတင်ပီး';
 
 export const DEFAULT_SHIFTS: ShiftConfig[] = [
   { shiftNo: '5', shiftName: 'Kitchen,D2 Morning', startTime: '05:00', lunchTime: '09:00~10:00', endTime: '13:00' },
@@ -132,8 +134,11 @@ export function computeRemark(
   const graceMinutes = cfg?.graceMinutes ?? GRACE_MINUTES;
   const earlyOutGraceMinutes = cfg?.earlyOutGraceMinutes ?? EARLY_OUT_GRACE_MINUTES;
   const otThresholdMinutes = cfg?.otThresholdMinutes ?? OT_THRESHOLD_MINUTES;
-  const noCheckoutRemark = cfg?.remarkNoCheckout ?? REMARK_NO_CHECKOUT;
+  const lateSuffix = cfg?.remarkLateSuffix ?? cfg?.remarkLate ?? REMARK_LATE_SUFFIX;
+  const noRecordRemark = cfg?.remarkNoRecord ?? REMARK_NO_RECORD;
+  const leaveAppliedRemark = cfg?.remarkLeaveApplied ?? REMARK_LEAVE_APPLIED;
   const otSuffix = cfg?.remarkOtSuffix ?? REMARK_OT_SUFFIX;
+  const otAppliedRemark = cfg?.remarkOtApplied ?? REMARK_OT_APPLIED;
 
   const shift = resolveShift(row.klass, shifts);
   const actPunches = extractPunches(row.actualTimeCard);
@@ -176,96 +181,116 @@ export function computeRemark(
     lunch = { start: lStart, end: lEnd };
   }
 
-  const scheduledWorkMins = computeWorkMinutes(startMin, endMin, lunch);
-  const scheduledWorkHours = Math.round((scheduledWorkMins / 60) * 10) / 10;
-
   // Helper to map punch time into shift timeline
   const adjustTime = (m: number) => {
     if (m < startMin - 180) return m + 1440;
     return m;
   };
 
+  // Helper to check if absent column is 0
+  const isAbsentZero = () => {
+    const ab = parseFloat(row.absent);
+    return !isNaN(ab) && ab === 0 && row.absent.trim() !== '';
+  };
+
   // 1. Check if completely blank / no punches
   if (actPunches.length === 0) {
-    return `( ${scheduledWorkHours} နာရီ ခွင့်တိုင်ရန် )`;
+    if (isAbsentZero()) {
+      return leaveAppliedRemark;
+    }
+    return noRecordRemark;
   }
 
-  const remarksList: string[] = [];
+  let leaveRemark = '';
 
-  // 2. Identify check-in and checkout punches
+  // 2. Check-in punch (first punch)
   const firstPunchStr = actPunches[0]!;
   const firstPunchRaw = hhmmToMinutes(firstPunchStr);
   const firstPunchMin = firstPunchRaw !== null ? adjustTime(firstPunchRaw) : null;
 
-  // Evaluate check-in
   if (firstPunchMin !== null) {
     const lateMinutes = firstPunchMin - startMin;
     if (lateMinutes > graceMinutes) {
-      if (lateMinutes < 60) {
-        remarksList.push(`( ${lateMinutes} မိနစ် ခွင့်တိုင်ရန် )`);
+      if (isAbsentZero()) {
+        leaveRemark = leaveAppliedRemark;
+      } else if (lateMinutes < 60) {
+        leaveRemark = `( ${lateMinutes} မိနစ် ${lateSuffix} )`;
       } else {
         const missedWorkMins = computeWorkMinutes(startMin, firstPunchMin, lunch);
         const missedHours = Math.round((missedWorkMins / 60) * 10) / 10;
-        remarksList.push(`( ${missedHours} နာရီ ခွင့်တိုင်ရန် )`);
+        leaveRemark = `( ${missedHours} နာရီ ${lateSuffix} )`;
       }
     }
   }
 
-  // Determine if checkout punch exists
+  // 3. Checkout punch
   let checkoutPunchMin: number | null = null;
   if (actPunches.length >= 2) {
     const lastPunchStr = actPunches[actPunches.length - 1]!;
     const lastPunchRaw = hhmmToMinutes(lastPunchStr);
     if (lastPunchRaw !== null) {
       const adjustedLast = adjustTime(lastPunchRaw);
-      // If last punch is not just a quick repeat of check-in (within 30 mins of arrival)
+      // If last punch is not just a quick repeat of check-in
       if (firstPunchMin !== null && adjustedLast - firstPunchMin > 30) {
         checkoutPunchMin = adjustedLast;
       }
     }
   }
 
-  // Clean date string comparison
-  const rowDateDigits = row.attendanceDate.replace(/\D/g, '');
-  const isTodayOrFuture = rowDateDigits.length === 8 && rowDateDigits >= todayStr;
-
-  if (checkoutPunchMin === null) {
-    // Punch out missing
-    if (!isTodayOrFuture) {
-      // Past date with missing checkout
-      if (noCheckoutRemark.trim() !== '') {
-        remarksList.push(noCheckoutRemark);
-      }
-    }
-    // If today or future, do nothing (shift is ongoing)
-  } else {
-    // Checkout punch is present
+  if (checkoutPunchMin !== null) {
     const earlyMinutes = endMin - checkoutPunchMin;
     if (earlyMinutes > earlyOutGraceMinutes) {
-      // Early checkout
-      if (earlyMinutes < 60) {
-        remarksList.push(`( ${earlyMinutes} မိနစ် ခွင့်တိုင်ရန် )`);
+      if (isAbsentZero()) {
+        if (!leaveRemark) leaveRemark = leaveAppliedRemark;
       } else {
         const missedWorkMins = computeWorkMinutes(checkoutPunchMin, endMin, lunch);
         const missedHours = Math.round((missedWorkMins / 60) * 10) / 10;
-        remarksList.push(`( ${missedHours} နာရီ ခွင့်တိုင်ရန် )`);
-      }
-    } else if (checkoutPunchMin > endMin) {
-      // Overtime check (only if not already populated in column R)
-      const existingOt = parseFloat(row.overtimeHours);
-      if (isNaN(existingOt) || existingOt <= 0) {
-        const extraMinutes = checkoutPunchMin - endMin;
-        if (extraMinutes >= otThresholdMinutes) {
-          const otHours = Math.floor((extraMinutes + 10) / 30) * 0.5;
-          if (otHours > 0) {
-            remarksList.push(`( ${otHours} ${otSuffix} )`);
-          }
-        }
+        const earlyStr = earlyMinutes < 60
+          ? `( ${earlyMinutes} မိနစ် ${lateSuffix} )`
+          : `( ${missedHours} နာရီ ${lateSuffix} )`;
+        leaveRemark = leaveRemark ? `${leaveRemark} ${earlyStr}` : earlyStr;
       }
     }
   }
 
+  // 4. Overtime evaluation
+  let otRemark = '';
+  let actualCardOt = 0;
+  if (checkoutPunchMin !== null && checkoutPunchMin > endMin) {
+    const extraMinutes = checkoutPunchMin - endMin;
+    if (extraMinutes >= otThresholdMinutes) {
+      actualCardOt = Math.floor((extraMinutes + 10) / 30) * 0.5;
+    }
+  }
+
+  const existingOt = parseFloat(row.overtimeHours);
+  const hasExistingOt = !isNaN(existingOt) && existingOt > 0;
+
+  if (actualCardOt > 0) {
+    if (hasExistingOt && Math.abs(existingOt - actualCardOt) < 0.1) {
+      otRemark = otAppliedRemark;
+    } else {
+      otRemark = `( ${actualCardOt} ${otSuffix} )`;
+    }
+  } else if (hasExistingOt) {
+    otRemark = otAppliedRemark;
+  }
+
+  const remarksList: string[] = [];
+  if (leaveRemark) remarksList.push(leaveRemark);
+  if (otRemark) remarksList.push(otRemark);
+
   return remarksList.join(' ');
+}
+
+/**
+ * Check if a row is already okay / fixed.
+ * Returns true if the row has no pending leave ('ခွင့်တိုင်ရန်') and no pending overtime ('အိုတီတင်ရန်').
+ */
+export function isRowResolved(row: AttendanceRow): boolean {
+  const rem = row.remarks || '';
+  if (!rem.trim()) return true;
+  return !rem.includes('ခွင့်တိုင်ရန်') && !rem.includes('အိုတီတင်ရန်');
 }
 
 /**

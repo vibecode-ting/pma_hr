@@ -86,6 +86,7 @@ export interface LiveFilterState {
   remarks: string;
   absent?: string;
   overtime?: string;
+  hideResolved?: boolean;
 }
 
 /**
@@ -134,6 +135,8 @@ export interface RulesConfig {
   remarkNoRecord: string;
   remarkNoCheckout: string;
   remarkOtSuffix: string;
+  remarkLeaveApplied?: string;
+  remarkOtApplied?: string;
   remarkLate?: string;
   shifts: ShiftConfig[];
 }

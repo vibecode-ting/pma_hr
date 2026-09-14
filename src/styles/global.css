@@ -127,17 +127,17 @@ h1, h2, h3, h4, h5 {
   background: var(--bg-void);
 }
 
-/* Left Hero Panel (Unblurred background image with glassy branding container) */
+/* Left Hero Panel (Unblurred background image with glassy branding container on desk) */
 .login-left-panel {
   flex: 1.35;
   position: relative;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-end;
   align-items: center;
   overflow: hidden;
   background-color: #0F131D;
-  padding: var(--space-8);
+  padding: 0 var(--space-6) 65px;
 }
 
 .login-hero-image {
@@ -155,64 +155,65 @@ h1, h2, h3, h4, h5 {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: radial-gradient(circle at center, rgba(11, 14, 20, 0.28) 0%, rgba(11, 14, 20, 0.72) 100%);
+  background: radial-gradient(circle at center, rgba(11, 14, 20, 0.2) 0%, rgba(11, 14, 20, 0.65) 100%);
   z-index: 2;
 }
 
 [data-theme="light"] .login-hero-scrim {
-  background: radial-gradient(circle at center, rgba(15, 23, 42, 0.18) 0%, rgba(15, 23, 42, 0.65) 100%);
+  background: radial-gradient(circle at center, rgba(15, 23, 42, 0.12) 0%, rgba(15, 23, 42, 0.55) 100%);
 }
 
 .login-hero-content {
   position: relative;
   z-index: 3;
   width: 100%;
-  max-width: 620px;
+  max-width: 650px;
   display: flex;
   justify-content: center;
   align-items: center;
+  margin-bottom: 25px;
 }
 
-/* Glassy container for Left Hero side */
+/* Glassy container fitted over the reception desk */
 .login-left-glass-card {
   width: 100%;
-  background: rgba(12, 17, 27, 0.62);
+  background: rgba(12, 17, 27, 0.68);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-top: 1px solid rgba(212, 175, 55, 0.5);
-  border-radius: 24px;
-  padding: var(--space-8) var(--space-10);
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65), 0 0 35px rgba(212, 175, 55, 0.15);
+  border-radius: 16px;
+  padding: 16px 26px;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.65), 0 0 25px rgba(212, 175, 55, 0.15);
   animation: leftCardFloat 5s ease-in-out infinite alternate;
 }
 
 [data-theme="light"] .login-left-glass-card {
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.85);
   border-top: 1px solid rgba(212, 175, 55, 0.65);
-  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.2), 0 0 35px rgba(212, 175, 55, 0.2);
+  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.2), 0 0 25px rgba(212, 175, 55, 0.2);
 }
 
 .login-left-badge {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 5px 14px;
+  gap: 6px;
+  padding: 3px 10px;
   border-radius: 9999px;
   background: rgba(212, 175, 55, 0.15);
   border: 1px solid rgba(212, 175, 55, 0.38);
   color: #D4AF37;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  margin-bottom: var(--space-4);
+  margin-bottom: 6px;
 }
 
 .login-left-badge .badge-dot {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: #D4AF37;
   box-shadow: 0 0 10px #D4AF37;
@@ -220,7 +221,7 @@ h1, h2, h3, h4, h5 {
 
 .login-left-title {
   font-family: var(--font-display);
-  font-size: clamp(2rem, 3.2vw, 2.9rem);
+  font-size: clamp(1.6rem, 2.3vw, 2.2rem);
   font-weight: 900;
   line-height: 1.15;
   letter-spacing: -0.02em;
@@ -228,8 +229,8 @@ h1, h2, h3, h4, h5 {
   background: linear-gradient(135deg, #FFFFFF 15%, #F6E7B7 60%, #D4AF37 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 6px 20px rgba(0, 0, 0, 0.85));
-  margin: 0 0 var(--space-3) 0;
+  filter: drop-shadow(0 4px 14px rgba(0, 0, 0, 0.85));
+  margin: 0 0 4px 0;
   animation: glowPulse 4s ease-in-out infinite alternate;
   white-space: nowrap;
 }
@@ -243,9 +244,9 @@ h1, h2, h3, h4, h5 {
 }
 
 .login-left-subtext {
-  font-size: 0.95rem;
+  font-size: 0.82rem;
   color: rgba(255, 255, 255, 0.85);
-  line-height: 1.5;
+  line-height: 1.4;
   margin: 0;
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.65);
 }
@@ -337,6 +338,20 @@ h1, h2, h3, h4, h5 {
   margin-bottom: var(--space-5);
 }
 
+.login-right-brand-tag {
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent-gold, #D4AF37);
+  margin-bottom: 6px;
+}
+
+[data-theme="light"] .login-right-brand-tag {
+  color: #0F2D6B; /* Dark Blue */
+  font-weight: 800;
+}
+
 .login-right-logo {
   height: 52px;
   width: auto;
@@ -356,12 +371,20 @@ h1, h2, h3, h4, h5 {
   margin: 0 0 var(--space-2) 0;
 }
 
+[data-theme="light"] .login-right-app-title {
+  color: #0F2D6B; /* Dark Blue */
+}
+
 .login-form-desc {
   font-size: 0.84rem;
   color: var(--text-secondary);
   text-align: center;
   line-height: 1.45;
   margin: 0;
+}
+
+[data-theme="light"] .login-form-desc {
+  color: #1E3A8A; /* Dark Blue */
 }
 
 .login-btn {
@@ -1830,6 +1853,37 @@ h1, h2, h3, h4, h5 {
   font-size: 0.78rem;
   font-weight: 600;
   color: var(--gold-500);
+}
+
+.filter-hide-resolved-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding: 3px 10px;
+  border-radius: var(--radius-full, 9999px);
+  background: rgba(212, 175, 55, 0.12);
+  border: 1px solid rgba(212, 175, 55, 0.32);
+  color: var(--accent-gold, #D4AF37);
+  font-size: 0.76rem;
+  font-weight: 600;
+  user-select: none;
+  transition: all 150ms ease;
+}
+
+.filter-hide-resolved-label:hover {
+  background: rgba(212, 175, 55, 0.2);
+}
+
+.filter-hide-resolved-label input[type="checkbox"] {
+  accent-color: #D4AF37;
+  cursor: pointer;
+}
+
+[data-theme="light"] .filter-hide-resolved-label {
+  background: rgba(15, 45, 107, 0.08);
+  border-color: rgba(15, 45, 107, 0.25);
+  color: #0F2D6B;
 }
 
 .filter-grid {

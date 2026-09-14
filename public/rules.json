@@ -4,8 +4,10 @@
   "otThresholdMinutes": 20,
   "remarkLateSuffix": "ခွင့်တိုင်ရန်",
   "remarkNoRecord": "( 8 နာရီ ခွင့်တိုင်ရန် )",
+  "remarkLeaveApplied": "ခွင့်တိုင်ပြီး",
   "remarkNoCheckout": "",
-  "remarkOtSuffix": "hour အိုတီ တင်ရန်",
+  "remarkOtSuffix": "hour အိုတီတင်ရန်",
+  "remarkOtApplied": "အိုတီတင်ပီး",
   "shifts": [
     { "shiftNo": "5", "shiftName": "Kitchen,D2 Morning", "startTime": "05:00", "lunchTime": "09:00~10:00", "endTime": "13:00" },
     { "shiftNo": "8", "shiftName": "Security,Driver,Fire Morning", "startTime": "06:30", "lunchTime": "11:00~12:00", "endTime": "14:30" },

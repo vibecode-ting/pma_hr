@@ -19,7 +19,11 @@ import {
   OT_THRESHOLD_MINUTES,
   REMARK_LATE_SUFFIX,
   REMARK_NO_RECORD,
+  REMARK_LEAVE_APPLIED,
   REMARK_NO_CHECKOUT,
+  REMARK_OT_SUFFIX,
+  REMARK_OT_APPLIED,
+  isRowResolved,
 } from './rules';
 import { exportSelection } from './export';
 import {
@@ -50,8 +54,10 @@ let defaultRulesConfig: RulesConfig = {
   otThresholdMinutes: OT_THRESHOLD_MINUTES,
   remarkLateSuffix: REMARK_LATE_SUFFIX,
   remarkNoRecord: REMARK_NO_RECORD,
+  remarkLeaveApplied: REMARK_LEAVE_APPLIED,
   remarkNoCheckout: REMARK_NO_CHECKOUT,
-  remarkOtSuffix: 'hour အိုတီ တင်ရန်',
+  remarkOtSuffix: REMARK_OT_SUFFIX,
+  remarkOtApplied: REMARK_OT_APPLIED,
   shifts: JSON.parse(JSON.stringify(DEFAULT_SHIFTS)),
 };
 let rulesConfig: RulesConfig = JSON.parse(JSON.stringify(defaultRulesConfig));
@@ -61,7 +67,7 @@ let selectedGroups: Set<string> = new Set();
 let exportMode: ExportMode = 'per-group';
 let parseErrors: string[] = [];
 let parseWarnings: string[] = [];
-let activeFilter: LiveFilterState = { idNo: '', name: '', groupCode: '', date: '', klass: '', remarks: '', absent: '', overtime: '' };
+let activeFilter: LiveFilterState = { idNo: '', name: '', groupCode: '', date: '', klass: '', remarks: '', absent: '', overtime: '', hideResolved: true };
 
 const SESSION_KEY = 'hr_portal_session';
 const THEME_STORAGE_KEY = 'hr_portal_theme';
@@ -136,8 +142,10 @@ async function loadRulesConfig(): Promise<void> {
         otThresholdMinutes: typeof data.otThresholdMinutes === 'number' ? data.otThresholdMinutes : OT_THRESHOLD_MINUTES,
         remarkLateSuffix: data.remarkLateSuffix ?? data.remarkLate ?? REMARK_LATE_SUFFIX,
         remarkNoRecord: data.remarkNoRecord ?? REMARK_NO_RECORD,
+        remarkLeaveApplied: data.remarkLeaveApplied ?? REMARK_LEAVE_APPLIED,
         remarkNoCheckout: data.remarkNoCheckout !== undefined ? data.remarkNoCheckout : REMARK_NO_CHECKOUT,
-        remarkOtSuffix: data.remarkOtSuffix ?? 'hour အိုတီ တင်ရန်',
+        remarkOtSuffix: data.remarkOtSuffix ?? REMARK_OT_SUFFIX,
+        remarkOtApplied: data.remarkOtApplied ?? REMARK_OT_APPLIED,
         shifts: Array.isArray(data.shifts) && data.shifts.length > 0 ? data.shifts : JSON.parse(JSON.stringify(DEFAULT_SHIFTS)),
       };
       rulesConfig = JSON.parse(JSON.stringify(defaultRulesConfig));
@@ -218,6 +226,11 @@ function renderLogin(container: HTMLElement): void {
   // Form Header: Centered Logo & Centered APP Title
   const formHeader = document.createElement('div');
   formHeader.className = 'login-form-header';
+
+  const brandTag = document.createElement('div');
+  brandTag.className = 'login-right-brand-tag';
+  brandTag.textContent = 'ADIDAS B150 HR-PORTAL';
+  formHeader.appendChild(brandTag);
 
   const rightLogo = document.createElement('img');
   rightLogo.src = './pouchen_logo.png';
@@ -726,7 +739,7 @@ function renderApp(container: HTMLElement): void {
     };
 
     const field = (
-      key: 'graceMinutes' | 'earlyOutGraceMinutes' | 'otThresholdMinutes' | 'remarkLateSuffix' | 'remarkNoRecord' | 'remarkNoCheckout' | 'remarkOtSuffix',
+      key: 'graceMinutes' | 'earlyOutGraceMinutes' | 'otThresholdMinutes' | 'remarkLateSuffix' | 'remarkNoRecord' | 'remarkLeaveApplied' | 'remarkNoCheckout' | 'remarkOtSuffix' | 'remarkOtApplied',
       id: string,
       labelText: string,
       type: 'text' | 'number' = 'text'
@@ -758,7 +771,7 @@ function renderApp(container: HTMLElement): void {
         } else if (key === 'otThresholdMinutes') {
           rulesConfig.otThresholdMinutes = Math.max(0, parseInt(v, 10) || 0);
         } else {
-          rulesConfig[key] = v;
+          (rulesConfig as any)[key] = v;
         }
         reapplyRulesAndRefresh();
       };
@@ -777,10 +790,12 @@ function renderApp(container: HTMLElement): void {
     grid.appendChild(field('graceMinutes', 'rule-grace', 'Check-in Grace (Minutes)', 'number'));
     grid.appendChild(field('earlyOutGraceMinutes', 'rule-early-grace', 'Early Out Grace (Minutes)', 'number'));
     grid.appendChild(field('otThresholdMinutes', 'rule-ot-threshold', 'OT Threshold (Minutes past end)', 'number'));
-    grid.appendChild(field('remarkLateSuffix', 'rule-late', 'Late Check-in Suffix'));
-    grid.appendChild(field('remarkNoRecord', 'rule-norecord', 'No Punch / Absent Remark'));
+    grid.appendChild(field('remarkLateSuffix', 'rule-late', 'Late Check-in Suffix (ခွင့်တိုင်ရန်)'));
+    grid.appendChild(field('remarkNoRecord', 'rule-norecord', 'No Punch / Absent Remark (( 8 နာရီ ခွင့်တိုင်ရန် ))'));
+    grid.appendChild(field('remarkLeaveApplied', 'rule-leave-applied', 'Leave Applied Remark (ခွင့်တိုင်ပြီး)'));
+    grid.appendChild(field('remarkOtSuffix', 'rule-ot-suffix', 'Overtime Remark Suffix (hour အိုတီတင်ရန်)'));
+    grid.appendChild(field('remarkOtApplied', 'rule-ot-applied', 'OT Applied Remark (အိုတီတင်ပီး)'));
     grid.appendChild(field('remarkNoCheckout', 'rule-nocheckout', 'Missing Checkout Remark (Past Dates)'));
-    grid.appendChild(field('remarkOtSuffix', 'rule-ot-suffix', 'Overtime Remark Suffix (အိုတီတင်ရန်)'));
     panel.appendChild(grid);
 
     // Shift Schedule Section
@@ -949,8 +964,10 @@ function renderApp(container: HTMLElement): void {
       if (inputs.otThresholdMinutes) inputs.otThresholdMinutes.value = String(rulesConfig.otThresholdMinutes);
       if (inputs.remarkLateSuffix) inputs.remarkLateSuffix.value = rulesConfig.remarkLateSuffix;
       if (inputs.remarkNoRecord) inputs.remarkNoRecord.value = rulesConfig.remarkNoRecord;
-      if (inputs.remarkNoCheckout) inputs.remarkNoCheckout.value = rulesConfig.remarkNoCheckout;
+      if (inputs.remarkLeaveApplied) inputs.remarkLeaveApplied.value = rulesConfig.remarkLeaveApplied ?? 'ခွင့်တိုင်ပြီး';
       if (inputs.remarkOtSuffix) inputs.remarkOtSuffix.value = rulesConfig.remarkOtSuffix;
+      if (inputs.remarkOtApplied) inputs.remarkOtApplied.value = rulesConfig.remarkOtApplied ?? 'အိုတီတင်ပီး';
+      if (inputs.remarkNoCheckout) inputs.remarkNoCheckout.value = rulesConfig.remarkNoCheckout;
       rebuildShiftTable();
       reapplyRulesAndRefresh();
       showToast('All rules and shifts reset to defaults ✅', 'success');
@@ -975,7 +992,10 @@ function renderApp(container: HTMLElement): void {
         btn.disabled = true;
         btn.innerHTML = `<span class="spinner"></span><span data-i18n="export.generating">${t('export.generating')}</span>`;
         try {
-          await exportSelection(allRows, selectedGroups, exportMode, (msg) => showToast(msg, 'info'));
+          const exportRows = activeFilter.hideResolved !== false
+            ? allRows.filter((r) => !isRowResolved(r))
+            : allRows;
+          await exportSelection(exportRows, selectedGroups, exportMode, (msg) => showToast(msg, 'info'));
           showToast(t('export.generate') + ' ✅', 'success');
         } catch (e) { showToast(String(e), 'error'); }
         btn.disabled = false;
@@ -1015,7 +1035,10 @@ function renderApp(container: HTMLElement): void {
 
   function updateExportPreview(): void {
     const info = document.getElementById('export-preview-info');
-    if (info) info.textContent = buildExportPreviewInfo(allRows, selectedGroups, exportMode);
+    const exportRows = activeFilter.hideResolved !== false
+      ? allRows.filter((r) => !isRowResolved(r))
+      : allRows;
+    if (info) info.textContent = buildExportPreviewInfo(exportRows, selectedGroups, exportMode);
   }
 
   function getGroups(): GroupInfo[] {
@@ -1065,7 +1088,7 @@ function renderApp(container: HTMLElement): void {
   function resetAll(): void {
     uploadedFiles = []; allRows = []; selectedGroups = new Set();
     exportMode = 'per-group'; parseErrors = []; parseWarnings = [];
-    activeFilter = { idNo: '', name: '', groupCode: '', date: '', klass: '', remarks: '', absent: '', overtime: '' };
+    activeFilter = { idNo: '', name: '', groupCode: '', date: '', klass: '', remarks: '', absent: '', overtime: '', hideResolved: true };
     rerender();
   }
 
