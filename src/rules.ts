@@ -17,8 +17,9 @@ export const REMARK_LATE_SUFFIX = 'ခွင့်တိုင်ရန်';
 export const REMARK_NO_RECORD = '( 8 နာရီ ခွင့်တိုင်ရန် )';
 export const REMARK_LEAVE_APPLIED = 'ခွင့်တိုင်ပြီး';
 export const REMARK_NO_CHECKOUT = '';
-export const REMARK_OT_SUFFIX = 'hour အိုတီတင်ရန်';
-export const REMARK_OT_APPLIED = 'အိုတီတင်ပီး';
+export const REMARK_OT_SUFFIX = 'အိုတီတင်ရန်';
+export const REMARK_OT_APPLIED = 'အိုတီတင်ပြီး';
+export const REMARK_COMBINE_JOIN = ' နှင့် ';
 
 export const DEFAULT_SHIFTS: ShiftConfig[] = [
   { shiftNo: '5', shiftName: 'Kitchen,D2 Morning', startTime: '05:00', lunchTime: '09:00~10:00', endTime: '13:00' },
@@ -123,19 +124,27 @@ export function extractPunches(actualTimeCard: string): string[] {
 }
 
 /**
+ * Get current system time as minutes from midnight (0..1439).
+ */
+export function getCurrentTimeMinutes(): number {
+  const d = new Date();
+  return d.getHours() * 60 + d.getMinutes();
+}
+
+/**
  * Main remark computation function for a single row.
  */
 export function computeRemark(
   row: AttendanceRow,
   cfg?: Partial<RulesConfig>,
-  todayStr: string = getTodayDateString()
+  todayStr: string = getTodayDateString(),
+  currentMinutes: number = getCurrentTimeMinutes()
 ): string {
   const shifts = cfg?.shifts && cfg.shifts.length > 0 ? cfg.shifts : DEFAULT_SHIFTS;
   const graceMinutes = cfg?.graceMinutes ?? GRACE_MINUTES;
   const earlyOutGraceMinutes = cfg?.earlyOutGraceMinutes ?? EARLY_OUT_GRACE_MINUTES;
   const otThresholdMinutes = cfg?.otThresholdMinutes ?? OT_THRESHOLD_MINUTES;
   const lateSuffix = cfg?.remarkLateSuffix ?? cfg?.remarkLate ?? REMARK_LATE_SUFFIX;
-  const noRecordRemark = cfg?.remarkNoRecord ?? REMARK_NO_RECORD;
   const leaveAppliedRemark = cfg?.remarkLeaveApplied ?? REMARK_LEAVE_APPLIED;
   const otSuffix = cfg?.remarkOtSuffix ?? REMARK_OT_SUFFIX;
   const otAppliedRemark = cfg?.remarkOtApplied ?? REMARK_OT_APPLIED;
@@ -163,6 +172,18 @@ export function computeRemark(
     if (stdPunches.length >= 4) {
       const e = hhmmToMinutes(stdPunches[3] ?? '');
       if (e !== null) endMin = e;
+    }
+  }
+
+  // Check if attendance date is in the future or today before shift start time:
+  const rowDate = (row.attendanceDate || '').trim().replace(/[-/]/g, '');
+  if (rowDate && rowDate > todayStr) {
+    return '';
+  }
+  if (rowDate && rowDate === todayStr && actPunches.length === 0) {
+    // If shift start time is later than current time (it's still early / night shift / future assign)
+    if (currentMinutes < startMin + graceMinutes) {
+      return '';
     }
   }
 
@@ -200,9 +221,9 @@ export function computeRemark(
   // 1. Check if completely blank / no punches
   if (actPunches.length === 0) {
     if (isAbsentZero()) {
-      return leaveAppliedRemark;
+      return `( 8 နာရီ ${leaveAppliedRemark} )`;
     }
-    return noRecordRemark;
+    return `( 8 နာရီ ${lateSuffix} )`;
   }
 
   let leaveRemark = '';
@@ -215,14 +236,13 @@ export function computeRemark(
   if (firstPunchMin !== null) {
     const lateMinutes = firstPunchMin - startMin;
     if (lateMinutes > graceMinutes) {
+      const missedWorkMins = computeWorkMinutes(startMin, firstPunchMin, lunch);
+      const missedHours = Math.round((missedWorkMins / 60) * 10) / 10;
+      const timeStr = lateMinutes < 60 ? `${lateMinutes} မိနစ်` : `${missedHours} နာရီ`;
       if (isAbsentZero()) {
-        leaveRemark = leaveAppliedRemark;
-      } else if (lateMinutes < 60) {
-        leaveRemark = `( ${lateMinutes} မိနစ် ${lateSuffix} )`;
+        leaveRemark = `${timeStr} ${leaveAppliedRemark}`;
       } else {
-        const missedWorkMins = computeWorkMinutes(startMin, firstPunchMin, lunch);
-        const missedHours = Math.round((missedWorkMins / 60) * 10) / 10;
-        leaveRemark = `( ${missedHours} နာရီ ${lateSuffix} )`;
+        leaveRemark = `${timeStr} ${lateSuffix}`;
       }
     }
   }
@@ -244,16 +264,11 @@ export function computeRemark(
   if (checkoutPunchMin !== null) {
     const earlyMinutes = endMin - checkoutPunchMin;
     if (earlyMinutes > earlyOutGraceMinutes) {
-      if (isAbsentZero()) {
-        if (!leaveRemark) leaveRemark = leaveAppliedRemark;
-      } else {
-        const missedWorkMins = computeWorkMinutes(checkoutPunchMin, endMin, lunch);
-        const missedHours = Math.round((missedWorkMins / 60) * 10) / 10;
-        const earlyStr = earlyMinutes < 60
-          ? `( ${earlyMinutes} မိနစ် ${lateSuffix} )`
-          : `( ${missedHours} နာရီ ${lateSuffix} )`;
-        leaveRemark = leaveRemark ? `${leaveRemark} ${earlyStr}` : earlyStr;
-      }
+      const missedWorkMins = computeWorkMinutes(checkoutPunchMin, endMin, lunch);
+      const missedHours = Math.round((missedWorkMins / 60) * 10) / 10;
+      const timeStr = earlyMinutes < 60 ? `${earlyMinutes} မိနစ်` : `${missedHours} နာရီ`;
+      const earlyStr = isAbsentZero() ? `${timeStr} ${leaveAppliedRemark}` : `${timeStr} ${lateSuffix}`;
+      leaveRemark = leaveRemark ? `${leaveRemark} နှင့် ${earlyStr}` : earlyStr;
     }
   }
 
@@ -275,18 +290,24 @@ export function computeRemark(
   const hasExistingOt = !isNaN(existingOt) && existingOt > 0;
 
   if (hasExistingOt) {
-    // If Overtime hours column has data (>0), it is already submitted and correct from sources ("အိုတီတင်ပီး")
-    otRemark = otAppliedRemark;
+    // Overtime hours column has data (>0) -> Already submitted
+    otRemark = `${existingOt} နာရီ ${otAppliedRemark}`;
   } else if (actualCardOt > 0) {
     // Overtime hours is 0 or empty, but actual card has overtime
-    otRemark = `( ${actualCardOt} ${otSuffix} )`;
+    otRemark = `${actualCardOt} နာရီ ${otSuffix}`;
   }
 
-  const remarksList: string[] = [];
-  if (leaveRemark) remarksList.push(leaveRemark);
-  if (otRemark) remarksList.push(otRemark);
-
-  return remarksList.join(' ');
+  // 5. Combinations of Leave & OT
+  if (leaveRemark && otRemark) {
+    return `( ${leaveRemark} နှင့် ${otRemark} )`;
+  }
+  if (leaveRemark) {
+    return `( ${leaveRemark} )`;
+  }
+  if (otRemark) {
+    return `( ${otRemark} )`;
+  }
+  return '';
 }
 
 /**
@@ -306,11 +327,12 @@ export function applyRemarks(
   rows: AttendanceRow[],
   onWarn?: (msg: string) => void,
   cfg?: Partial<RulesConfig>,
-  todayStr: string = getTodayDateString()
+  todayStr: string = getTodayDateString(),
+  currentMinutes: number = getCurrentTimeMinutes()
 ): AttendanceRow[] {
   for (const row of rows) {
     try {
-      row.remarks = computeRemark(row, cfg, todayStr);
+      row.remarks = computeRemark(row, cfg, todayStr, currentMinutes);
     } catch (err) {
       row.remarks = '';
       const msg = `Row (Employee ID "${row.employeeId}", file "${row.sourceFile}"): remark error — ${

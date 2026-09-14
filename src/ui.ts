@@ -874,10 +874,10 @@ export function buildLivePreviewSection(
     { value: '', label: `— All —` },
     { value: '__HAS_REMARK__', label: t('filter.withRemarks') || 'With Remarks' },
     { value: '__NO_REMARK__', label: t('filter.noRemarks') || 'No Remarks' },
-    { value: 'ခွင့်တိုင်ရန်', label: 'ခွင့်တိုင်ရန် (Need Leave)' },
+    { value: 'ခွင့်တိုင်ရန်', label: 'ခွင့်တိုင်ရန် (Leave Needed)' },
     { value: 'ခွင့်တိုင်ပြီး', label: 'ခွင့်တိုင်ပြီး (Leave Applied)' },
-    { value: 'အိုတီတင်ရန်', label: 'အိုတီတင်ရန် (Need OT)' },
-    { value: 'အိုတီတင်ပီး', label: 'အိုတီတင်ပီး (OT Applied)' },
+    { value: 'အိုတီတင်ရန်', label: 'အိုတီတင်ရန် (OT Needed)' },
+    { value: 'အိုတီတင်ပြီး', label: 'အိုတီတင်ပြီး (OT Applied)' },
   ];
 
   for (const c of remChoices) {

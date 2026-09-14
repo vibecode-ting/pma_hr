@@ -151,6 +151,14 @@ async function loadRulesConfig(): Promise<void> {
       rulesConfig = JSON.parse(JSON.stringify(defaultRulesConfig));
     }
   } catch { /* use defaults */ }
+
+  const saved = localStorage.getItem('hr_portal_rules_config');
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      rulesConfig = { ...rulesConfig, ...parsed };
+    } catch { /* ignore */ }
+  }
 }
 
 // ─── Login page ───────────────────────────────────────────────────────────────
@@ -525,14 +533,15 @@ function renderApp(container: HTMLElement): void {
   body.appendChild(contentWrap);
 
   // ── Tab bar ──
-  let activeTab: 1 | 2 = 1;
+  let activeTab: 1 | 2 | 3 = 1;
 
   const tabBar = document.createElement('div');
   tabBar.className = 'app-tab-bar';
 
-  const tabs: { id: 1 | 2; labelKey: string; icon: string }[] = [
+  const tabs: { id: 1 | 2 | 3; labelKey: string; icon: string }[] = [
     { id: 1, labelKey: 'upload.heading', icon: icons.uploadCloud },
-    { id: 2, labelKey: 'preview.heading', icon: icons.fileSpreadsheet },
+    { id: 2, labelKey: 'nav.rulesConfig', icon: icons.settings },
+    { id: 3, labelKey: 'preview.heading', icon: icons.fileSpreadsheet },
   ];
 
   function renderTabs(): void {
@@ -682,37 +691,30 @@ function renderApp(container: HTMLElement): void {
 
       wrap.appendChild(step2Row);
 
-      // Rules Configuration (Optional button with folded animation)
-      const rulesWrap = document.createElement('div');
-      rulesWrap.className = 'rules-accordion';
-
-      const rulesToggle = document.createElement('button');
-      rulesToggle.className = 'btn btn-secondary';
-      rulesToggle.style.cssText = 'width:auto;display:inline-flex;margin-top:var(--space-2);';
-      rulesToggle.innerHTML = `${icons.settings} <span data-i18n="nav.rulesConfig">${t('nav.rulesConfig') || 'Rules Configuration'}</span> ${icons.chevronDown}`;
-      rulesWrap.appendChild(rulesToggle);
-
-      const rulesContent = document.createElement('div');
-      rulesContent.style.cssText = 'overflow:hidden;max-height:0;transition:max-height 0.3s ease;margin-top:var(--space-3);';
-      
-      const rulesCard = sectionCard('⚙', 'nav.rulesConfig');
-      rulesCard.appendChild(buildRulesConfigPanel());
-      rulesContent.appendChild(rulesCard);
-      rulesWrap.appendChild(rulesContent);
-
-      let rulesOpen = false;
-      rulesToggle.addEventListener('click', () => {
-        rulesOpen = !rulesOpen;
-        if (rulesOpen) {
-          rulesContent.style.maxHeight = '3000px';
-          rulesToggle.innerHTML = `${icons.settings} <span data-i18n="nav.rulesConfig">${t('nav.rulesConfig') || 'Rules Configuration'}</span> ${icons.chevronUp}`;
-        } else {
-          rulesContent.style.maxHeight = '0';
-          rulesToggle.innerHTML = `${icons.settings} <span data-i18n="nav.rulesConfig">${t('nav.rulesConfig') || 'Rules Configuration'}</span> ${icons.chevronDown}`;
-        }
+      // Pre-configure in Configs tab banner
+      const configBanner = document.createElement('div');
+      configBanner.className = 'upload-configs-banner';
+      configBanner.style.cssText = 'display:flex;align-items:center;justify-content:space-between;background:var(--bg-elevated);border:1px solid var(--border-hairline);border-radius:var(--radius-lg);padding:var(--space-3) var(--space-4);margin-top:var(--space-3);';
+      configBanner.innerHTML = `
+        <div style="display:flex;align-items:center;gap:var(--space-3);">
+          <span style="color:var(--accent-gold);display:inline-flex;">${icons.settings}</span>
+          <div>
+            <div style="font-weight:600;font-size:0.88rem;">Pre-configure Shifts & Remarks</div>
+            <div style="color:var(--text-muted);font-size:0.75rem;">Adjust shift schedules, lunch breaks, and remark rules in the Configs tab</div>
+          </div>
+        </div>
+      `;
+      const gotoConfigBtn = document.createElement('button');
+      gotoConfigBtn.type = 'button';
+      gotoConfigBtn.className = 'btn btn-secondary btn-sm';
+      gotoConfigBtn.innerHTML = `Open Configs &rarr;`;
+      gotoConfigBtn.addEventListener('click', () => {
+        activeTab = 2;
+        renderTabs();
+        renderContent();
       });
-
-      wrap.appendChild(rulesWrap);
+      configBanner.appendChild(gotoConfigBtn);
+      wrap.appendChild(configBanner);
     }
 
     return wrap;
@@ -725,6 +727,7 @@ function renderApp(container: HTMLElement): void {
     const inputs: Record<string, HTMLInputElement> = {};
 
     const reapplyRulesAndRefresh = () => {
+      localStorage.setItem('hr_portal_rules_config', JSON.stringify(rulesConfig));
       if (allRows.length > 0) {
         applyRemarks(allRows, undefined, rulesConfig);
         updateExportPreview();
@@ -783,12 +786,10 @@ function renderApp(container: HTMLElement): void {
     grid.appendChild(field('graceMinutes', 'rule-grace', 'Check-in Grace (Minutes)', 'number'));
     grid.appendChild(field('earlyOutGraceMinutes', 'rule-early-grace', 'Early Out Grace (Minutes)', 'number'));
     grid.appendChild(field('otThresholdMinutes', 'rule-ot-threshold', 'OT Threshold (Minutes past end)', 'number'));
-    grid.appendChild(field('remarkLateSuffix', 'rule-late', 'Late Check-in Suffix (ခွင့်တိုင်ရန်)'));
-    grid.appendChild(field('remarkNoRecord', 'rule-norecord', 'No Punch / Absent Remark (( 8 နာရီ ခွင့်တိုင်ရန် ))'));
-    grid.appendChild(field('remarkLeaveApplied', 'rule-leave-applied', 'Leave Applied Remark (ခွင့်တိုင်ပြီး)'));
-    grid.appendChild(field('remarkOtSuffix', 'rule-ot-suffix', 'Overtime Remark Suffix (hour အိုတီတင်ရန်)'));
-    grid.appendChild(field('remarkOtApplied', 'rule-ot-applied', 'OT Applied Remark (အိုတီတင်ပီး)'));
-    grid.appendChild(field('remarkNoCheckout', 'rule-nocheckout', 'Missing Checkout Remark (Past Dates)'));
+    grid.appendChild(field('remarkLateSuffix', 'rule-late', 'Leave Needed Suffix (ခွင့်တိုင်ရန်)'));
+    grid.appendChild(field('remarkLeaveApplied', 'rule-leave-applied', 'Leave Done Suffix (ခွင့်တိုင်ပြီး)'));
+    grid.appendChild(field('remarkOtSuffix', 'rule-ot-suffix', 'OT Needed Suffix (အိုတီတင်ရန်)'));
+    grid.appendChild(field('remarkOtApplied', 'rule-ot-applied', 'OT Done Suffix (အိုတီတင်ပြီး)'));
     panel.appendChild(grid);
 
     // Shift Schedule Section
@@ -802,6 +803,9 @@ function renderApp(container: HTMLElement): void {
     shiftTitle.className = 'shift-config-title';
     shiftTitle.innerHTML = `<span style="display:inline-flex;align-items:center;gap:6px;">${icons.calendar || '📅'} <span>Shift Schedules (Matched by Excel "Class" Column)</span></span>`;
     shiftHeader.appendChild(shiftTitle);
+
+    const shiftActions = document.createElement('div');
+    shiftActions.style.cssText = 'display:flex;align-items:center;gap:var(--space-2);margin-left:auto;';
 
     const addShiftBtn = document.createElement('button');
     addShiftBtn.type = 'button';
@@ -821,7 +825,24 @@ function renderApp(container: HTMLElement): void {
       reapplyRulesAndRefresh();
       showToast(`Shift ${newShiftNo} added`, 'success');
     });
-    shiftHeader.appendChild(addShiftBtn);
+    shiftActions.appendChild(addShiftBtn);
+
+    const resetBtn = document.createElement('button');
+    resetBtn.type = 'button';
+    resetBtn.className = 'btn btn-secondary btn-sm';
+    resetBtn.innerHTML = `${icons.rotateCcw} <span>Reset Defaults</span>`;
+    resetBtn.addEventListener('click', () => {
+      if (confirm('Reset all shift schedules and remark rules to factory defaults?')) {
+        localStorage.removeItem('hr_portal_rules_config');
+        rulesConfig = JSON.parse(JSON.stringify(defaultRulesConfig));
+        reapplyRulesAndRefresh();
+        renderContent();
+        showToast('Reset to default configurations', 'info');
+      }
+    });
+    shiftActions.appendChild(resetBtn);
+
+    shiftHeader.appendChild(shiftActions);
     shiftSec.appendChild(shiftHeader);
 
     const tableWrap = document.createElement('div');
@@ -977,7 +998,28 @@ function renderApp(container: HTMLElement): void {
     return panel;
   }
 
-  // ── TAB 2: Preview ──
+  // ── TAB 2: Configs (Pre-prepare shift rules & remarks anytime) ──
+  function buildConfigsSection(): HTMLElement {
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'display:flex;flex-direction:column;gap:var(--space-5);';
+
+    const card = sectionCard('⚙', 'nav.rulesConfig');
+
+    const cardTop = document.createElement('div');
+    cardTop.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin:-8px 0 var(--space-4) 0;flex-wrap:wrap;gap:var(--space-2);';
+
+    const subDesc = document.createElement('p');
+    subDesc.style.cssText = 'color:var(--text-muted);font-size:0.85rem;margin:0;';
+    subDesc.textContent = 'Pre-configure shift working hours, lunch break deductions, grace periods, and Myanmar remark rules before or after uploading.';
+    cardTop.appendChild(subDesc);
+
+    card.appendChild(cardTop);
+    card.appendChild(buildRulesConfigPanel());
+    wrap.appendChild(card);
+    return wrap;
+  }
+
+  // ── TAB 3: Preview ──
   function buildPreviewSection(): HTMLElement {
     const callbacks = {
       onResetAll: resetAll,
@@ -1014,6 +1056,12 @@ function renderApp(container: HTMLElement): void {
       stepWrap.appendChild(buildUploadSection());
       contentPanel.appendChild(stepWrap);
     } else if (activeTab === 2) {
+      contentPanel.classList.remove('live-view-fullscreen');
+      const stepWrap = document.createElement('div');
+      stepWrap.className = 'step-process-container';
+      stepWrap.appendChild(buildConfigsSection());
+      contentPanel.appendChild(stepWrap);
+    } else if (activeTab === 3) {
       contentPanel.classList.add('live-view-fullscreen');
       contentPanel.appendChild(buildPreviewSection());
     }

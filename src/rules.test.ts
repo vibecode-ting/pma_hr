@@ -68,85 +68,91 @@ describe('computeWorkMinutes', () => {
 
 describe('computeRemark - Shift Schedule Rules', () => {
   const todayDate = '20260914';
+  const afternoonTime = 13 * 60; // 13:00 (780 mins)
 
   it('10 minutes late → no remark (within grace period)', () => {
     const row = makeRow('0710,1600', { attendanceDate: todayDate });
-    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate)).toBe('');
+    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate, afternoonTime)).toBe('');
   });
 
   it('11 minutes late with absent empty → "( 11 မိနစ် ခွင့်တိုင်ရန် )"', () => {
     const row = makeRow('0711,1600', { attendanceDate: todayDate });
-    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate)).toBe('( 11 မိနစ် ခွင့်တိုင်ရန် )');
+    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate, afternoonTime)).toBe('( 11 မိနစ် ခွင့်တိုင်ရန် )');
   });
 
-  it('11 minutes late with absent == 0 → "ခွင့်တိုင်ပြီး"', () => {
+  it('11 minutes late with absent == 0 → "( 11 မိနစ် ခွင့်တိုင်ပြီး )"', () => {
     const row = makeRow('0711,1600', { absent: '0', attendanceDate: todayDate });
-    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate)).toBe('ခွင့်တိုင်ပြီး');
+    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate, afternoonTime)).toBe('( 11 မိနစ် ခွင့်တိုင်ပြီး )');
   });
 
   it('user shows up at 12:00 for Shift 11 (07:00 start, 11:30~12:30 lunch) → "( 4.5 နာရီ ခွင့်တိုင်ရန် )"', () => {
     const row = makeRow('1200,1600', { klass: '11', attendanceDate: todayDate });
-    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate)).toBe('( 4.5 နာရီ ခွင့်တိုင်ရန် )');
+    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate, afternoonTime)).toBe('( 4.5 နာရီ ခွင့်တိုင်ရန် )');
   });
 
-  it('user shows up at 12:00 with absent == 0 → "ခွင့်တိုင်ပြီး"', () => {
+  it('user shows up at 12:00 with absent == 0 → "( 4.5 နာရီ ခွင့်တိုင်ပြီး )"', () => {
     const row = makeRow('1200,1600', { klass: '11', absent: '0', attendanceDate: todayDate });
-    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate)).toBe('ခွင့်တိုင်ပြီး');
+    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate, afternoonTime)).toBe('( 4.5 နာရီ ခွင့်တိုင်ပြီး )');
   });
 
-  it('completely blank actual card → "( 8 နာရီ ခွင့်တိုင်ရန် )"', () => {
+  it('completely blank actual card after shift start time → "( 8 နာရီ ခွင့်တိုင်ရန် )"', () => {
     const row = makeRow('    ,    ', { klass: '11', attendanceDate: todayDate });
-    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate)).toBe('( 8 နာရီ ခွင့်တိုင်ရန် )');
+    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate, afternoonTime)).toBe('( 8 နာရီ ခွင့်တိုင်ရန် )');
   });
 
-  it('completely blank actual card with absent == 0 → "ခွင့်တိုင်ပြီး"', () => {
+  it('completely blank actual card before shift start time (e.g. night shift 19:00, checking at 13:00) → ""', () => {
+    const row = makeRow('    ,    ', { klass: '12', attendanceDate: todayDate }); // shift 12 starts at 19:00
+    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate, afternoonTime)).toBe('');
+  });
+
+  it('completely blank actual card with absent == 0 → "( 8 နာရီ ခွင့်တိုင်ပြီး )"', () => {
     const row = makeRow('    ,    ', { klass: '11', absent: '0', attendanceDate: todayDate });
-    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate)).toBe('ခွင့်တိုင်ပြီး');
+    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate, afternoonTime)).toBe('( 8 နာရီ ခွင့်တိုင်ပြီး )');
   });
 
   it('checkout at 15:50 (10 min early) → safe (within early out grace)', () => {
     const row = makeRow('0655,1550', { attendanceDate: todayDate });
-    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate)).toBe('');
+    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate, afternoonTime)).toBe('');
   });
 
   it('early checkout half-day at 12:30 → "( 3.5 နာရီ ခွင့်တိုင်ရန် )"', () => {
     const row = makeRow('0655,1230', { attendanceDate: todayDate });
-    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate)).toBe('( 3.5 နာရီ ခွင့်တိုင်ရန် )');
+    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate, afternoonTime)).toBe('( 3.5 နာရီ ခွင့်တိုင်ရန် )');
   });
 
-  it('early checkout with absent == 0 → "ခွင့်တိုင်ပြီး"', () => {
+  it('early checkout with absent == 0 → "( 3.5 နာရီ ခွင့်တိုင်ပြီး )"', () => {
     const row = makeRow('0655,1230', { absent: '0', attendanceDate: todayDate });
-    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate)).toBe('ခွင့်တိုင်ပြီး');
+    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate, afternoonTime)).toBe('( 3.5 နာရီ ခွင့်တိုင်ပြီး )');
   });
 
-  it('overtime punch at 17:00 (1h OT, col R empty) → "( 1 hour အိုတီတင်ရန် )"', () => {
+  it('overtime punch at 17:00 (1h OT, col R empty) → "( 1 နာရီ အိုတီတင်ရန် )"', () => {
     const row = makeRow('0655,1700', { attendanceDate: todayDate, overtimeHours: '0' });
-    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate)).toBe('( 1 hour အိုတီတင်ရန် )');
+    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate, afternoonTime)).toBe('( 1 နာရီ အိုတီတင်ရန် )');
   });
 
-  it('overtime punch at 17:00 and overtimeHours in Col R equals 1 → "အိုတီတင်ပီး"', () => {
+  it('overtime punch at 17:00 and overtimeHours in Col R equals 1 → "( 1 နာရီ အိုတီတင်ပြီး )"', () => {
     const row = makeRow('0655,1700', { attendanceDate: todayDate, overtimeHours: '1' });
-    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate)).toBe('အိုတီတင်ပီး');
+    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate, afternoonTime)).toBe('( 1 နာရီ အိုတီတင်ပြီး )');
   });
 
   it('Saturday shift 13 (07:00~11:00) checkout 14:30 with 1h lunch deduction → 2.5h OT needed if col R empty', () => {
     const row = makeRow('0655,1430', { klass: '13', attendanceDate: todayDate, overtimeHours: '0' });
-    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate)).toBe('( 2.5 hour အိုတီတင်ရန် )');
+    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate, afternoonTime)).toBe('( 2.5 နာရီ အိုတီတင်ရန် )');
   });
 
-  it('Saturday shift 13 checkout 14:30 when col R has 2.5 hrs → "အိုတီတင်ပီး"', () => {
+  it('Saturday shift 13 checkout 14:30 when col R has 2.5 hrs → "( 2.5 နာရီ အိုတီတင်ပြီး )"', () => {
     const row = makeRow('0655,1430', { klass: '13', attendanceDate: todayDate, overtimeHours: '2.5' });
-    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate)).toBe('အိုတီတင်ပီး');
+    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate, afternoonTime)).toBe('( 2.5 နာရီ အိုတီတင်ပြီး )');
   });
 
-  it('Saturday shift 13 checkout 14:00 when col R has 2 hrs → "အိုတီတင်ပီး"', () => {
+  it('Saturday shift 13 checkout 14:00 when col R has 2 hrs → "( 2 နာရီ အိုတီတင်ပြီး )"', () => {
     const row = makeRow('0655,1400', { klass: '13', attendanceDate: todayDate, overtimeHours: '2' });
-    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate)).toBe('အိုတီတင်ပီး');
+    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate, afternoonTime)).toBe('( 2 နာရီ အိုတီတင်ပြီး )');
   });
 
-  it('both leave applied and overtime applied → "ခွင့်တိုင်ပြီး အိုတီတင်ပီး"', () => {
+  it('both leave applied and overtime applied → "( 20 မိနစ် ခွင့်တိုင်ပြီး နှင့် 1 နာရီ အိုတီတင်ပြီး )"', () => {
     const row = makeRow('0720,1700', { attendanceDate: todayDate, absent: '0', overtimeHours: '1' });
-    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate)).toBe('ခွင့်တိုင်ပြီး အိုတီတင်ပီး');
+    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate, afternoonTime)).toBe('( 20 မိနစ် ခွင့်တိုင်ပြီး နှင့် 1 နာရီ အိုတီတင်ပြီး )');
   });
 });
 
@@ -157,17 +163,17 @@ describe('isRowResolved', () => {
   });
 
   it('ခွင့်တိုင်ပြီး → resolved', () => {
-    const row = makeRow('0700,1600', { remarks: 'ခွင့်တိုင်ပြီး' });
+    const row = makeRow('0700,1600', { remarks: '( 8 နာရီ ခွင့်တိုင်ပြီး )' });
     expect(isRowResolved(row)).toBe(true);
   });
 
-  it('အိုတီတင်ပီး → resolved', () => {
-    const row = makeRow('0700,1600', { remarks: 'အိုတီတင်ပီး' });
+  it('အိုတီတင်ပြီး → resolved', () => {
+    const row = makeRow('0700,1600', { remarks: '( 2.5 နာရီ အိုတီတင်ပြီး )' });
     expect(isRowResolved(row)).toBe(true);
   });
 
-  it('ခွင့်တိုင်ပြီး အိုတီတင်ပီး → resolved', () => {
-    const row = makeRow('0700,1600', { remarks: 'ခွင့်တိုင်ပြီး အိုတီတင်ပီး' });
+  it('ခွင့်တိုင်ပြီး နှင့် အိုတီတင်ပြီး → resolved', () => {
+    const row = makeRow('0700,1600', { remarks: '( 8 နာရီ ခွင့်တိုင်ပြီး နှင့် 2.5 နာရီ အိုတီတင်ပြီး )' });
     expect(isRowResolved(row)).toBe(true);
   });
 
@@ -177,7 +183,7 @@ describe('isRowResolved', () => {
   });
 
   it('contains အိုတီတင်ရန် → NOT resolved', () => {
-    const row = makeRow('0700,1600', { remarks: '( 1 hour အိုတီတင်ရန် )' });
+    const row = makeRow('0700,1600', { remarks: '( 1 နာရီ အိုတီတင်ရန် )' });
     expect(isRowResolved(row)).toBe(false);
   });
 });
