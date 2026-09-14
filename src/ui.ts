@@ -632,8 +632,10 @@ export function buildLivePreviewSection(
 
   // ── Extract unique options for filter choices ──
   const uniqueIds = Array.from(new Set(rows.map((r) => r.employeeId.trim()))).filter(Boolean).sort();
+  const uniqueNames = Array.from(new Set(rows.map((r) => r.name.trim()))).filter(Boolean).sort();
   const uniqueGroups = Array.from(new Set(rows.map((r) => r.groupCode.trim()))).filter(Boolean).sort();
   const uniqueDates = Array.from(new Set(rows.map((r) => r.attendanceDate.trim()))).filter(Boolean).sort();
+  const uniqueClasses = Array.from(new Set(rows.map((r) => r.klass.trim()))).filter(Boolean).sort();
 
   // ── Filter Panel ──
   const panel = document.createElement('div');
@@ -652,25 +654,24 @@ export function buildLivePreviewSection(
   panelHeader.appendChild(filterBadge);
   panel.appendChild(panelHeader);
 
-  // 4-column filter grid
+  // 8-column compact filter grid
   const grid = document.createElement('div');
   grid.className = 'filter-grid';
 
-  // 1. ID No Filter (Text input with datalist dropdown)
+  // 1. ID No Filter
   const idGroup = document.createElement('div');
   idGroup.className = 'filter-field';
   const idLabel = document.createElement('label');
   idLabel.className = 'filter-label';
   idLabel.setAttribute('for', 'filter-id-input');
-  idLabel.setAttribute('data-i18n', 'filter.idNo');
-  idLabel.textContent = t('filter.idNo');
+  idLabel.textContent = t('filter.idNo') || 'ID No';
   idGroup.appendChild(idLabel);
 
   const idInput = document.createElement('input');
   idInput.type = 'text';
   idInput.id = 'filter-id-input';
   idInput.className = 'filter-input';
-  idInput.placeholder = t('filter.typeOrSelect');
+  idInput.placeholder = 'ID...';
   idInput.setAttribute('list', 'filter-id-datalist');
   idInput.value = activeFilter.idNo;
   idGroup.appendChild(idInput);
@@ -685,21 +686,48 @@ export function buildLivePreviewSection(
   idGroup.appendChild(idDatalist);
   grid.appendChild(idGroup);
 
-  // 2. Group Code Filter (Text input with datalist dropdown)
+  // 2. Name Filter
+  const nameGroup = document.createElement('div');
+  nameGroup.className = 'filter-field';
+  const nameLabel = document.createElement('label');
+  nameLabel.className = 'filter-label';
+  nameLabel.setAttribute('for', 'filter-name-input');
+  nameLabel.textContent = 'Name';
+  nameGroup.appendChild(nameLabel);
+
+  const nameInput = document.createElement('input');
+  nameInput.type = 'text';
+  nameInput.id = 'filter-name-input';
+  nameInput.className = 'filter-input';
+  nameInput.placeholder = 'Name...';
+  nameInput.setAttribute('list', 'filter-name-datalist');
+  nameInput.value = activeFilter.name || '';
+  nameGroup.appendChild(nameInput);
+
+  const nameDatalist = document.createElement('datalist');
+  nameDatalist.id = 'filter-name-datalist';
+  for (const n of uniqueNames) {
+    const opt = document.createElement('option');
+    opt.value = n;
+    nameDatalist.appendChild(opt);
+  }
+  nameGroup.appendChild(nameDatalist);
+  grid.appendChild(nameGroup);
+
+  // 3. Group Code Filter
   const groupField = document.createElement('div');
   groupField.className = 'filter-field';
   const groupLabel = document.createElement('label');
   groupLabel.className = 'filter-label';
   groupLabel.setAttribute('for', 'filter-group-input');
-  groupLabel.setAttribute('data-i18n', 'filter.groupCode');
-  groupLabel.textContent = t('filter.groupCode');
+  groupLabel.textContent = t('filter.groupCode') || 'Group';
   groupField.appendChild(groupLabel);
 
   const groupInput = document.createElement('input');
   groupInput.type = 'text';
   groupInput.id = 'filter-group-input';
   groupInput.className = 'filter-input';
-  groupInput.placeholder = t('filter.typeOrSelect');
+  groupInput.placeholder = 'Group...';
   groupInput.setAttribute('list', 'filter-group-datalist');
   groupInput.value = activeFilter.groupCode;
   groupField.appendChild(groupInput);
@@ -714,21 +742,20 @@ export function buildLivePreviewSection(
   groupField.appendChild(groupDatalist);
   grid.appendChild(groupField);
 
-  // 3. Date Filter (Text input with datalist dropdown)
+  // 4. Date Filter
   const dateField = document.createElement('div');
   dateField.className = 'filter-field';
   const dateLabel = document.createElement('label');
   dateLabel.className = 'filter-label';
   dateLabel.setAttribute('for', 'filter-date-input');
-  dateLabel.setAttribute('data-i18n', 'filter.date');
-  dateLabel.textContent = t('filter.date');
+  dateLabel.textContent = t('filter.date') || 'Date';
   dateField.appendChild(dateLabel);
 
   const dateInput = document.createElement('input');
   dateInput.type = 'text';
   dateInput.id = 'filter-date-input';
   dateInput.className = 'filter-input';
-  dateInput.placeholder = t('filter.typeOrSelect');
+  dateInput.placeholder = 'Date...';
   dateInput.setAttribute('list', 'filter-date-datalist');
   dateInput.value = activeFilter.date;
   dateField.appendChild(dateInput);
@@ -743,14 +770,83 @@ export function buildLivePreviewSection(
   dateField.appendChild(dateDatalist);
   grid.appendChild(dateField);
 
-  // 4. Remarks Filter (Select dropdown + custom typing)
+  // 5. Class / Shift Filter
+  const classField = document.createElement('div');
+  classField.className = 'filter-field';
+  const classLabel = document.createElement('label');
+  classLabel.className = 'filter-label';
+  classLabel.setAttribute('for', 'filter-class-input');
+  classLabel.textContent = 'Class';
+  classField.appendChild(classLabel);
+
+  const classInput = document.createElement('input');
+  classInput.type = 'text';
+  classInput.id = 'filter-class-input';
+  classInput.className = 'filter-input';
+  classInput.placeholder = 'Class...';
+  classInput.setAttribute('list', 'filter-class-datalist');
+  classInput.value = activeFilter.klass || '';
+  classField.appendChild(classInput);
+
+  const classDatalist = document.createElement('datalist');
+  classDatalist.id = 'filter-class-datalist';
+  for (const k of uniqueClasses) {
+    const opt = document.createElement('option');
+    opt.value = k;
+    classDatalist.appendChild(opt);
+  }
+  classField.appendChild(classDatalist);
+  grid.appendChild(classField);
+
+  // 6. Absent Filter
+  const absField = document.createElement('div');
+  absField.className = 'filter-field';
+  const absLabel = document.createElement('label');
+  absLabel.className = 'filter-label';
+  absLabel.setAttribute('for', 'filter-absent-select');
+  absLabel.textContent = 'Absent';
+  absField.appendChild(absLabel);
+
+  const absSelect = document.createElement('select');
+  absSelect.id = 'filter-absent-select';
+  absSelect.className = 'filter-select';
+  absSelect.innerHTML = `
+    <option value="">— All —</option>
+    <option value="__HAS_ABSENT__">Absent > 0</option>
+    <option value="__NO_ABSENT__">No Absent (0)</option>
+  `;
+  if (activeFilter.absent) absSelect.value = activeFilter.absent;
+  absField.appendChild(absSelect);
+  grid.appendChild(absField);
+
+  // 7. Overtime Filter
+  const otField = document.createElement('div');
+  otField.className = 'filter-field';
+  const otLabel = document.createElement('label');
+  otLabel.className = 'filter-label';
+  otLabel.setAttribute('for', 'filter-ot-select');
+  otLabel.textContent = 'Overtime';
+  otField.appendChild(otLabel);
+
+  const otSelect = document.createElement('select');
+  otSelect.id = 'filter-ot-select';
+  otSelect.className = 'filter-select';
+  otSelect.innerHTML = `
+    <option value="">— All —</option>
+    <option value="__HAS_OT__">Overtime > 0</option>
+    <option value="__NO_OT__">No Overtime</option>
+  `;
+  if (activeFilter.overtime) otSelect.value = activeFilter.overtime;
+  otField.appendChild(otSelect);
+  grid.appendChild(otField);
+
+  // 8. Remarks Filter
   const remField = document.createElement('div');
   remField.className = 'filter-field';
   const remLabel = document.createElement('label');
   remLabel.className = 'filter-label';
   remLabel.setAttribute('for', 'filter-remarks-select');
-  remLabel.setAttribute('data-i18n', 'filter.remarks');
-  remLabel.textContent = t('filter.remarks');
+  remLabel.textContent = t('filter.remarks') || 'Remarks';
   remField.appendChild(remLabel);
 
   const remSelect = document.createElement('select');
@@ -758,12 +854,12 @@ export function buildLivePreviewSection(
   remSelect.className = 'filter-select';
 
   const remChoices: Array<{ value: string; label: string }> = [
-    { value: '', label: `— ${t('filter.all')} —` },
-    { value: '__HAS_REMARK__', label: t('filter.withRemarks') },
-    { value: '__NO_REMARK__', label: t('filter.noRemarks') },
-    { value: REMARK_NO_RECORD, label: `${t('badge.noRecord')} (${REMARK_NO_RECORD})` },
-    { value: REMARK_NO_CHECKOUT, label: `${t('badge.noCheckout')} (${REMARK_NO_CHECKOUT})` },
-    { value: REMARK_LATE_SUFFIX, label: `${t('badge.late')} (${REMARK_LATE_SUFFIX})` },
+    { value: '', label: `— All —` },
+    { value: '__HAS_REMARK__', label: t('filter.withRemarks') || 'With Remarks' },
+    { value: '__NO_REMARK__', label: t('filter.noRemarks') || 'No Remarks' },
+    { value: 'ခွင့်တိုင်ရန်', label: 'ခွင့်တိုင်ရန် (Leave)' },
+    { value: 'အိုတီ', label: 'အိုတီ (Overtime)' },
+    { value: 'တိုင်းကာဒ်မရှိ', label: 'တိုင်းကာဒ်မရှိ (No punch)' },
   ];
 
   for (const c of remChoices) {
@@ -781,16 +877,19 @@ export function buildLivePreviewSection(
   // Reset filters & Download buttons
   const actions = document.createElement('div');
   actions.className = 'filter-actions';
-  actions.style.cssText = 'display:flex;gap:var(--space-3);align-items:center;margin-top:var(--space-3);';
 
   const clearBtn = document.createElement('button');
-  clearBtn.className = 'btn btn-secondary';
+  clearBtn.className = 'btn btn-secondary btn-sm';
   clearBtn.type = 'button';
   clearBtn.innerHTML = `${icons.rotateCcw} <span data-i18n="filter.clear">${t('filter.clear')}</span>`;
   clearBtn.addEventListener('click', () => {
     idInput.value = '';
+    nameInput.value = '';
     groupInput.value = '';
     dateInput.value = '';
+    classInput.value = '';
+    absSelect.value = '';
+    otSelect.value = '';
     remSelect.value = '';
     applyFilters();
   });
@@ -799,7 +898,7 @@ export function buildLivePreviewSection(
   if (callbacks?.onResetAll) {
     const hardResetBtn = document.createElement('button');
     hardResetBtn.type = 'button';
-    hardResetBtn.className = 'btn btn-danger';
+    hardResetBtn.className = 'btn btn-danger btn-sm';
     hardResetBtn.innerHTML = `${icons.fileX} <span data-i18n="reset.button">${t('reset.button')}</span>`;
     hardResetBtn.addEventListener('click', () => {
       if (confirm(t('reset.confirm'))) callbacks.onResetAll!();
@@ -807,7 +906,6 @@ export function buildLivePreviewSection(
     actions.appendChild(hardResetBtn);
   }
 
-  // Push download button to right
   const spacer = document.createElement('div');
   spacer.style.flex = '1';
   actions.appendChild(spacer);
@@ -817,35 +915,42 @@ export function buildLivePreviewSection(
     dlBtn.id = 'export-btn';
     dlBtn.type = 'button';
     dlBtn.className = 'btn btn-primary';
-    dlBtn.style.cssText = 'font-weight:bold;font-size:1rem;padding:10px 24px;'; // Bold and colorful
+    dlBtn.style.cssText = 'font-weight:bold;font-size:0.92rem;padding:8px 20px;';
     dlBtn.innerHTML = `${icons.download} <span data-i18n="export.generate">${t('export.generate')}</span>`;
     dlBtn.addEventListener('click', () => callbacks.onDownload!(dlBtn));
     actions.appendChild(dlBtn);
   }
 
   panel.appendChild(actions);
-
   container.appendChild(panel);
 
   // Table wrapper container
   const tableHolder = document.createElement('div');
+  tableHolder.style.width = '100%';
   container.appendChild(tableHolder);
 
   // ── Filter evaluation ──
   const applyFilters = () => {
     const current: LiveFilterState = {
       idNo: idInput.value.trim(),
+      name: nameInput.value.trim(),
       groupCode: groupInput.value.trim(),
       date: dateInput.value.trim(),
+      klass: classInput.value.trim(),
+      absent: absSelect.value.trim(),
+      overtime: otSelect.value.trim(),
       remarks: remSelect.value.trim(),
     };
 
     const hasActiveFilter = Boolean(
-      current.idNo || current.groupCode || current.date || current.remarks
+      current.idNo || current.name || current.groupCode || current.date || current.klass || current.absent || current.overtime || current.remarks
     );
 
     const filtered = rows.filter((r) => {
       if (current.idNo && !r.employeeId.toLowerCase().includes(current.idNo.toLowerCase())) {
+        return false;
+      }
+      if (current.name && !r.name.toLowerCase().includes(current.name.toLowerCase())) {
         return false;
       }
       if (current.groupCode && !r.groupCode.toLowerCase().includes(current.groupCode.toLowerCase())) {
@@ -853,6 +958,20 @@ export function buildLivePreviewSection(
       }
       if (current.date && !r.attendanceDate.includes(current.date)) {
         return false;
+      }
+      if (current.klass && !r.klass.toLowerCase().includes(current.klass.toLowerCase())) {
+        return false;
+      }
+      if (current.absent) {
+        const ab = parseFloat(r.absent) || 0;
+        if (current.absent === '__HAS_ABSENT__' && ab <= 0) return false;
+        if (current.absent === '__NO_ABSENT__' && ab > 0) return false;
+      }
+      if (current.overtime) {
+        const ot = parseFloat(r.overtimeHours) || 0;
+        const hasOtRemark = r.remarks.includes('အိုတီ');
+        if (current.overtime === '__HAS_OT__' && ot <= 0 && !hasOtRemark) return false;
+        if (current.overtime === '__NO_OT__' && (ot > 0 || hasOtRemark)) return false;
       }
       if (current.remarks) {
         if (current.remarks === '__HAS_REMARK__') {
@@ -885,10 +1004,16 @@ export function buildLivePreviewSection(
 
   idInput.addEventListener('input', applyFilters);
   idInput.addEventListener('change', applyFilters);
+  nameInput.addEventListener('input', applyFilters);
+  nameInput.addEventListener('change', applyFilters);
   groupInput.addEventListener('input', applyFilters);
   groupInput.addEventListener('change', applyFilters);
   dateInput.addEventListener('input', applyFilters);
   dateInput.addEventListener('change', applyFilters);
+  classInput.addEventListener('input', applyFilters);
+  classInput.addEventListener('change', applyFilters);
+  absSelect.addEventListener('change', applyFilters);
+  otSelect.addEventListener('change', applyFilters);
   remSelect.addEventListener('change', applyFilters);
 
   // Initial display

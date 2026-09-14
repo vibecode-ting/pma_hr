@@ -15,7 +15,8 @@ export const OT_THRESHOLD_MINUTES = 20;
 
 export const REMARK_LATE_SUFFIX = 'ခွင့်တိုင်ရန်';
 export const REMARK_NO_RECORD = '( 8 နာရီ ခွင့်တိုင်ရန် )';
-export const REMARK_NO_CHECKOUT = 'အထွက်တိုင်းကာဒ်မရှိပါ။';
+export const REMARK_NO_CHECKOUT = '';
+export const REMARK_OT_SUFFIX = 'hour အိုတီ တင်ရန်';
 
 export const DEFAULT_SHIFTS: ShiftConfig[] = [
   { shiftNo: '5', shiftName: 'Kitchen,D2 Morning', startTime: '05:00', lunchTime: '09:00~10:00', endTime: '13:00' },
@@ -132,6 +133,7 @@ export function computeRemark(
   const earlyOutGraceMinutes = cfg?.earlyOutGraceMinutes ?? EARLY_OUT_GRACE_MINUTES;
   const otThresholdMinutes = cfg?.otThresholdMinutes ?? OT_THRESHOLD_MINUTES;
   const noCheckoutRemark = cfg?.remarkNoCheckout ?? REMARK_NO_CHECKOUT;
+  const otSuffix = cfg?.remarkOtSuffix ?? REMARK_OT_SUFFIX;
 
   const shift = resolveShift(row.klass, shifts);
   const actPunches = extractPunches(row.actualTimeCard);
@@ -231,7 +233,9 @@ export function computeRemark(
     // Punch out missing
     if (!isTodayOrFuture) {
       // Past date with missing checkout
-      remarksList.push(noCheckoutRemark);
+      if (noCheckoutRemark.trim() !== '') {
+        remarksList.push(noCheckoutRemark);
+      }
     }
     // If today or future, do nothing (shift is ongoing)
   } else {
@@ -254,7 +258,7 @@ export function computeRemark(
         if (extraMinutes >= otThresholdMinutes) {
           const otHours = Math.floor((extraMinutes + 10) / 30) * 0.5;
           if (otHours > 0) {
-            remarksList.push(`( ${otHours} hour အိုတီ တင်ရန် )`);
+            remarksList.push(`( ${otHours} ${otSuffix} )`);
           }
         }
       }

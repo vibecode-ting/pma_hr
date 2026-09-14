@@ -51,16 +51,17 @@ let defaultRulesConfig: RulesConfig = {
   remarkLateSuffix: REMARK_LATE_SUFFIX,
   remarkNoRecord: REMARK_NO_RECORD,
   remarkNoCheckout: REMARK_NO_CHECKOUT,
+  remarkOtSuffix: 'hour အိုတီ တင်ရန်',
   shifts: JSON.parse(JSON.stringify(DEFAULT_SHIFTS)),
 };
 let rulesConfig: RulesConfig = JSON.parse(JSON.stringify(defaultRulesConfig));
 let allRows: AttendanceRow[] = [];
 let uploadedFiles: File[] = [];
 let selectedGroups: Set<string> = new Set();
-let exportMode: ExportMode = 'combined';
+let exportMode: ExportMode = 'per-group';
 let parseErrors: string[] = [];
 let parseWarnings: string[] = [];
-let activeFilter: LiveFilterState = { idNo: '', groupCode: '', date: '', remarks: '' };
+let activeFilter: LiveFilterState = { idNo: '', name: '', groupCode: '', date: '', klass: '', remarks: '', absent: '', overtime: '' };
 
 const SESSION_KEY = 'hr_portal_session';
 const THEME_STORAGE_KEY = 'hr_portal_theme';
@@ -141,7 +142,8 @@ async function loadRulesConfig(): Promise<void> {
         otThresholdMinutes: typeof data.otThresholdMinutes === 'number' ? data.otThresholdMinutes : OT_THRESHOLD_MINUTES,
         remarkLateSuffix: data.remarkLateSuffix ?? data.remarkLate ?? REMARK_LATE_SUFFIX,
         remarkNoRecord: data.remarkNoRecord ?? REMARK_NO_RECORD,
-        remarkNoCheckout: data.remarkNoCheckout ?? REMARK_NO_CHECKOUT,
+        remarkNoCheckout: data.remarkNoCheckout !== undefined ? data.remarkNoCheckout : REMARK_NO_CHECKOUT,
+        remarkOtSuffix: data.remarkOtSuffix ?? 'hour အိုတီ တင်ရန်',
         shifts: Array.isArray(data.shifts) && data.shifts.length > 0 ? data.shifts : JSON.parse(JSON.stringify(DEFAULT_SHIFTS)),
       };
       rulesConfig = JSON.parse(JSON.stringify(defaultRulesConfig));
@@ -308,12 +310,6 @@ function renderLogin(container: HTMLElement): void {
   submitBtn.setAttribute('data-i18n', 'login.submit');
   submitBtn.textContent = t('login.submit');
   formContainer.appendChild(submitBtn);
-
-  // Resources chips
-  if (appConfig?.resources && appConfig.resources.length > 0) {
-    const resBar = buildResourcesBar(appConfig.resources);
-    if (resBar) formContainer.appendChild(resBar);
-  }
 
   rightPanel.appendChild(formContainer);
 
@@ -742,7 +738,7 @@ function renderApp(container: HTMLElement): void {
     };
 
     const field = (
-      key: 'graceMinutes' | 'earlyOutGraceMinutes' | 'otThresholdMinutes' | 'remarkLateSuffix' | 'remarkNoRecord' | 'remarkNoCheckout',
+      key: 'graceMinutes' | 'earlyOutGraceMinutes' | 'otThresholdMinutes' | 'remarkLateSuffix' | 'remarkNoRecord' | 'remarkNoCheckout' | 'remarkOtSuffix',
       id: string,
       labelText: string,
       type: 'text' | 'number' = 'text'
@@ -796,6 +792,7 @@ function renderApp(container: HTMLElement): void {
     grid.appendChild(field('remarkLateSuffix', 'rule-late', 'Late Check-in Suffix'));
     grid.appendChild(field('remarkNoRecord', 'rule-norecord', 'No Punch / Absent Remark'));
     grid.appendChild(field('remarkNoCheckout', 'rule-nocheckout', 'Missing Checkout Remark (Past Dates)'));
+    grid.appendChild(field('remarkOtSuffix', 'rule-ot-suffix', 'Overtime Remark Suffix (အိုတီတင်ရန်)'));
     panel.appendChild(grid);
 
     // Shift Schedule Section
@@ -965,6 +962,7 @@ function renderApp(container: HTMLElement): void {
       if (inputs.remarkLateSuffix) inputs.remarkLateSuffix.value = rulesConfig.remarkLateSuffix;
       if (inputs.remarkNoRecord) inputs.remarkNoRecord.value = rulesConfig.remarkNoRecord;
       if (inputs.remarkNoCheckout) inputs.remarkNoCheckout.value = rulesConfig.remarkNoCheckout;
+      if (inputs.remarkOtSuffix) inputs.remarkOtSuffix.value = rulesConfig.remarkOtSuffix;
       rebuildShiftTable();
       reapplyRulesAndRefresh();
       showToast('All rules and shifts reset to defaults ✅', 'success');
@@ -983,10 +981,6 @@ function renderApp(container: HTMLElement): void {
 
   // ── TAB 2: Preview ──
   function buildPreviewSection(): HTMLElement {
-    const wrap = document.createElement('div');
-    wrap.className = 'preview-wrap';
-    
-    // Create callbacks to handle actions from the filter panel
     const callbacks = {
       onResetAll: resetAll,
       onDownload: async (btn: HTMLButtonElement) => {
@@ -1001,17 +995,8 @@ function renderApp(container: HTMLElement): void {
       }
     };
 
-    const previewCard = sectionCard('👁', 'preview.heading');
-    previewCard.style.width = '100%';
-    previewCard.style.maxWidth = '100%';
-    
     const visibleRows = getVisibleRows();
-    previewCard.appendChild(
-      buildLivePreviewSection(visibleRows, activeFilter, (f) => { activeFilter = f; }, callbacks)
-    );
-    wrap.appendChild(previewCard);
-
-    return wrap;
+    return buildLivePreviewSection(visibleRows, activeFilter, (f) => { activeFilter = f; }, callbacks);
   }
 
   // ── Content render ──
@@ -1021,13 +1006,17 @@ function renderApp(container: HTMLElement): void {
     if (parseErrors.length > 0) contentPanel.appendChild(buildAlertPanel(parseErrors, 'error', 'error.parseTitle'));
     if (parseWarnings.length > 0) contentPanel.appendChild(buildAlertPanel(parseWarnings, 'warning', 'error.warnTitle'));
 
-    const stepWrap = document.createElement('div');
-    stepWrap.className = 'step-process-container';
+    if (activeTab === 1) {
+      contentPanel.classList.remove('live-view-fullscreen');
+      const stepWrap = document.createElement('div');
+      stepWrap.className = 'step-process-container';
+      stepWrap.appendChild(buildUploadSection());
+      contentPanel.appendChild(stepWrap);
+    } else if (activeTab === 2) {
+      contentPanel.classList.add('live-view-fullscreen');
+      contentPanel.appendChild(buildPreviewSection());
+    }
 
-    if (activeTab === 1) stepWrap.appendChild(buildUploadSection());
-    else if (activeTab === 2) stepWrap.appendChild(buildPreviewSection());
-
-    contentPanel.appendChild(stepWrap);
     applyAll();
   }
 
@@ -1087,8 +1076,8 @@ function renderApp(container: HTMLElement): void {
 
   function resetAll(): void {
     uploadedFiles = []; allRows = []; selectedGroups = new Set();
-    exportMode = 'combined'; parseErrors = []; parseWarnings = [];
-    activeFilter = { idNo: '', groupCode: '', date: '', remarks: '' };
+    exportMode = 'per-group'; parseErrors = []; parseWarnings = [];
+    activeFilter = { idNo: '', name: '', groupCode: '', date: '', klass: '', remarks: '', absent: '', overtime: '' };
     rerender();
   }
 

@@ -111,10 +111,14 @@ describe('computeRemark - Shift Schedule Rules', () => {
     expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate)).toBe('');
   });
 
-  it('uploading past date with only check-in punch → writes missing checkout remark', () => {
-    // Punch at 06:49, no checkout, date is past
+  it('uploading past date with only check-in punch and default empty checkout remark → ""', () => {
     const row = makeRow('0649,        ', { attendanceDate: pastDate });
-    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate)).toBe(REMARK_NO_CHECKOUT);
+    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate)).toBe('');
+  });
+
+  it('uploading past date with only check-in punch and custom missing checkout remark → writes remark', () => {
+    const row = makeRow('0649,        ', { attendanceDate: pastDate });
+    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS, remarkNoCheckout: 'အထွက်တိုင်းကာဒ်မရှိပါ။' }, todayDate)).toBe('အထွက်တိုင်းကာဒ်မရှိပါ။');
   });
 
   it('checkout at 15:50 (10 min early) → safe (within early out grace)', () => {

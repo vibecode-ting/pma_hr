@@ -78,9 +78,13 @@ export type Theme = 'dark' | 'light';
  */
 export interface LiveFilterState {
   idNo: string;
+  name?: string;
   groupCode: string;
   date: string;
+  klass?: string;
   remarks: string;
+  absent?: string;
+  overtime?: string;
 }
 
 /**
@@ -128,6 +132,7 @@ export interface RulesConfig {
   remarkLateSuffix: string;
   remarkNoRecord: string;
   remarkNoCheckout: string;
+  remarkOtSuffix: string;
   remarkLate?: string;
   shifts: ShiftConfig[];
 }
