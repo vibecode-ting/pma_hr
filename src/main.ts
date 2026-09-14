@@ -161,7 +161,7 @@ function renderLogin(container: HTMLElement): void {
   const page = document.createElement('div');
   page.className = 'page-wrapper login-split-page';
 
-  // ── Left Hero Panel: Unblurred Background Image & Glassy Branding ──
+  // ── Left Hero Panel: Full Unobscured Background Image & Logo Wall ──
   const leftPanel = document.createElement('div');
   leftPanel.className = 'login-left-panel';
 
@@ -174,29 +174,6 @@ function renderLogin(container: HTMLElement): void {
   heroScrim.className = 'login-hero-scrim';
   leftPanel.appendChild(heroScrim);
 
-  const heroContent = document.createElement('div');
-  heroContent.className = 'login-hero-content';
-
-  const glassCard = document.createElement('div');
-  glassCard.className = 'login-left-glass-card';
-
-  const badgePill = document.createElement('div');
-  badgePill.className = 'login-left-badge';
-  badgePill.innerHTML = `<span class="badge-dot"></span><span>ADIDAS B150 HR-PORTAL</span>`;
-  glassCard.appendChild(badgePill);
-
-  const headline = document.createElement('h1');
-  headline.className = 'login-left-title';
-  headline.textContent = 'Pouchen | B150 HR-Portal';
-  glassCard.appendChild(headline);
-
-  const subline = document.createElement('p');
-  subline.className = 'login-left-subtext';
-  subline.textContent = 'Attendance & Shift Automation System';
-  glassCard.appendChild(subline);
-
-  heroContent.appendChild(glassCard);
-  leftPanel.appendChild(heroContent);
   page.appendChild(leftPanel);
 
   // ── Right Form Panel: Controls, Glass Card & Form ──
@@ -309,6 +286,30 @@ function renderLogin(container: HTMLElement): void {
 
   rightPanel.appendChild(formContainer);
 
+  // ── Bottom Section in Right Panel: Smaller, Transparent, Centered Brand Card & Footer ──
+  const rightBottom = document.createElement('div');
+  rightBottom.className = 'login-right-bottom';
+
+  const brandCard = document.createElement('div');
+  brandCard.className = 'login-right-brand-card';
+
+  const brandPill = document.createElement('div');
+  brandPill.className = 'login-right-card-badge';
+  brandPill.innerHTML = `<span class="badge-dot"></span><span>ADIDAS B150 HR-PORTAL</span>`;
+  brandCard.appendChild(brandPill);
+
+  const brandTitle = document.createElement('div');
+  brandTitle.className = 'login-right-card-title';
+  brandTitle.textContent = 'Pouchen | B150 HR-Portal';
+  brandCard.appendChild(brandTitle);
+
+  const brandSub = document.createElement('div');
+  brandSub.className = 'login-right-card-sub';
+  brandSub.textContent = 'Attendance & Shift Automation System';
+  brandCard.appendChild(brandSub);
+
+  rightBottom.appendChild(brandCard);
+
   // Panel Footer
   const panelFooter = document.createElement('footer');
   panelFooter.className = 'login-panel-footer';
@@ -323,7 +324,9 @@ function renderLogin(container: HTMLElement): void {
 
   panelFooter.appendChild(footerLine1);
   panelFooter.appendChild(footerLine2);
-  rightPanel.appendChild(panelFooter);
+  rightBottom.appendChild(panelFooter);
+
+  rightPanel.appendChild(rightBottom);
 
   page.appendChild(rightPanel);
   container.appendChild(page);

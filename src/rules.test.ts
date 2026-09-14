@@ -129,6 +129,21 @@ describe('computeRemark - Shift Schedule Rules', () => {
     expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate)).toBe('အိုတီတင်ပီး');
   });
 
+  it('Saturday shift 13 (07:00~11:00) checkout 14:30 with 1h lunch deduction → 2.5h OT needed if col R empty', () => {
+    const row = makeRow('0655,1430', { klass: '13', attendanceDate: todayDate, overtimeHours: '0' });
+    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate)).toBe('( 2.5 hour အိုတီတင်ရန် )');
+  });
+
+  it('Saturday shift 13 checkout 14:30 when col R has 2.5 hrs → "အိုတီတင်ပီး"', () => {
+    const row = makeRow('0655,1430', { klass: '13', attendanceDate: todayDate, overtimeHours: '2.5' });
+    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate)).toBe('အိုတီတင်ပီး');
+  });
+
+  it('Saturday shift 13 checkout 14:00 when col R has 2 hrs → "အိုတီတင်ပီး"', () => {
+    const row = makeRow('0655,1400', { klass: '13', attendanceDate: todayDate, overtimeHours: '2' });
+    expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate)).toBe('အိုတီတင်ပီး');
+  });
+
   it('both leave applied and overtime applied → "ခွင့်တိုင်ပြီး အိုတီတင်ပီး"', () => {
     const row = makeRow('0720,1700', { attendanceDate: todayDate, absent: '0', overtimeHours: '1' });
     expect(computeRemark(row, { shifts: DEFAULT_SHIFTS }, todayDate)).toBe('ခွင့်တိုင်ပြီး အိုတီတင်ပီး');

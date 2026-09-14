@@ -179,6 +179,10 @@ export function computeRemark(
     if (lEnd < startMin - 180) lEnd += 1440;
     if (lEnd <= lStart) lEnd += 1440;
     lunch = { start: lStart, end: lEnd };
+  } else {
+    // Every shift has 1 hour lunch break deduction ("ဘယ်အဆိုင်းဖြစ်ဖြစ်")
+    const defaultLunchStart = startMin + 4 * 60;
+    lunch = { start: defaultLunchStart, end: defaultLunchStart + 60 };
   }
 
   // Helper to map punch time into shift timeline
@@ -257,7 +261,11 @@ export function computeRemark(
   let otRemark = '';
   let actualCardOt = 0;
   if (checkoutPunchMin !== null && checkoutPunchMin > endMin) {
-    const extraMinutes = checkoutPunchMin - endMin;
+    let extraMinutes = checkoutPunchMin - endMin;
+    // 1-hour lunch break deduction for overtime ("ေန့လည်စာစား ချိန် lunch break 1 နာရီ နှုတ်ရမယ် ေလ. ဘယ်အဆိုင်းဖြစ်ဖြစ်")
+    if ((endMin <= 11 * 60 && checkoutPunchMin >= 12 * 60) || extraMinutes >= 90) {
+      extraMinutes = Math.max(0, extraMinutes - 60);
+    }
     if (extraMinutes >= otThresholdMinutes) {
       actualCardOt = Math.floor((extraMinutes + 10) / 30) * 0.5;
     }
@@ -266,14 +274,12 @@ export function computeRemark(
   const existingOt = parseFloat(row.overtimeHours);
   const hasExistingOt = !isNaN(existingOt) && existingOt > 0;
 
-  if (actualCardOt > 0) {
-    if (hasExistingOt && Math.abs(existingOt - actualCardOt) < 0.1) {
-      otRemark = otAppliedRemark;
-    } else {
-      otRemark = `( ${actualCardOt} ${otSuffix} )`;
-    }
-  } else if (hasExistingOt) {
+  if (hasExistingOt) {
+    // If Overtime hours column has data (>0), it is already submitted and correct from sources ("အိုတီတင်ပီး")
     otRemark = otAppliedRemark;
+  } else if (actualCardOt > 0) {
+    // Overtime hours is 0 or empty, but actual card has overtime
+    otRemark = `( ${actualCardOt} ${otSuffix} )`;
   }
 
   const remarksList: string[] = [];
