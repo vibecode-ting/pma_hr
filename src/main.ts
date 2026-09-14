@@ -196,6 +196,27 @@ function renderLogin(container: HTMLElement): void {
 
   rightPanel.appendChild(panelTop);
 
+  // ── Top Center Brand Header (No box, just title & text) ──
+  const topBrand = document.createElement('div');
+  topBrand.className = 'login-right-top-brand';
+
+  const brandBadge = document.createElement('div');
+  brandBadge.className = 'login-right-brand-badge';
+  brandBadge.innerHTML = `<span class="badge-dot"></span><span>ADIDAS B150 HR-PORTAL</span>`;
+  topBrand.appendChild(brandBadge);
+
+  const brandTitle = document.createElement('h1');
+  brandTitle.className = 'login-right-brand-title';
+  brandTitle.textContent = 'Pouchen | B150 HR-Portal';
+  topBrand.appendChild(brandTitle);
+
+  const brandSub = document.createElement('p');
+  brandSub.className = 'login-right-brand-sub';
+  brandSub.textContent = 'Attendance & Shift Automation System';
+  topBrand.appendChild(brandSub);
+
+  rightPanel.appendChild(topBrand);
+
   // Center Form Container with Glass & Shadows
   const formContainer = document.createElement('div');
   formContainer.className = 'login-form-container login-glass-card';
@@ -203,11 +224,6 @@ function renderLogin(container: HTMLElement): void {
   // Form Header: Centered Logo & Centered APP Title
   const formHeader = document.createElement('div');
   formHeader.className = 'login-form-header';
-
-  const brandTag = document.createElement('div');
-  brandTag.className = 'login-right-brand-tag';
-  brandTag.textContent = 'ADIDAS B150 HR-PORTAL';
-  formHeader.appendChild(brandTag);
 
   const rightLogo = document.createElement('img');
   rightLogo.src = './pouchen_logo.png';
@@ -286,30 +302,6 @@ function renderLogin(container: HTMLElement): void {
 
   rightPanel.appendChild(formContainer);
 
-  // ── Bottom Section in Right Panel: Smaller, Transparent, Centered Brand Card & Footer ──
-  const rightBottom = document.createElement('div');
-  rightBottom.className = 'login-right-bottom';
-
-  const brandCard = document.createElement('div');
-  brandCard.className = 'login-right-brand-card';
-
-  const brandPill = document.createElement('div');
-  brandPill.className = 'login-right-card-badge';
-  brandPill.innerHTML = `<span class="badge-dot"></span><span>ADIDAS B150 HR-PORTAL</span>`;
-  brandCard.appendChild(brandPill);
-
-  const brandTitle = document.createElement('div');
-  brandTitle.className = 'login-right-card-title';
-  brandTitle.textContent = 'Pouchen | B150 HR-Portal';
-  brandCard.appendChild(brandTitle);
-
-  const brandSub = document.createElement('div');
-  brandSub.className = 'login-right-card-sub';
-  brandSub.textContent = 'Attendance & Shift Automation System';
-  brandCard.appendChild(brandSub);
-
-  rightBottom.appendChild(brandCard);
-
   // Panel Footer
   const panelFooter = document.createElement('footer');
   panelFooter.className = 'login-panel-footer';
@@ -324,9 +316,7 @@ function renderLogin(container: HTMLElement): void {
 
   panelFooter.appendChild(footerLine1);
   panelFooter.appendChild(footerLine2);
-  rightBottom.appendChild(panelFooter);
-
-  rightPanel.appendChild(rightBottom);
+  rightPanel.appendChild(panelFooter);
 
   page.appendChild(rightPanel);
   container.appendChild(page);
