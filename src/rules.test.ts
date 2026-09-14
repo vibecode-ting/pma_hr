@@ -33,6 +33,7 @@ function makeRow(
     standardTimeCard: standard,
     actualTimeCard: actual,
     absent: '0',
+    overtimeHours: '0',
     klass: '11',
     remarks: '',
     ...overrides,

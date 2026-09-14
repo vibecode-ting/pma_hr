@@ -23,6 +23,7 @@ const OUTPUT_HEADERS = [
   'Attendance Date',
   'Actual Time Card',
   'Absent',
+  'Overtime hours',
   'Class',
   'Remarks',
 ] as const;
@@ -36,13 +37,14 @@ const COLUMN_WIDTHS: Record<string, number> = {
   'Attendance Date': 16,
   'Actual Time Card': 38,
   Absent: 10,
+  'Overtime hours': 14,
   Class: 8,
   Remarks: 42,
 };
 
 /**
  * Convert an array of AttendanceRows to a 2D array for SheetJS,
- * in the exact 9-column output order.
+ * in the exact output order.
  */
 function rowsToAoa(rows: AttendanceRow[]): (string | number)[][] {
   const header: string[] = [...OUTPUT_HEADERS];
@@ -54,6 +56,7 @@ function rowsToAoa(rows: AttendanceRow[]): (string | number)[][] {
     r.attendanceDate,
     r.actualTimeCard,
     r.absent,
+    r.overtimeHours,
     r.klass,
     r.remarks,
   ]);

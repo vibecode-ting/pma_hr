@@ -465,6 +465,7 @@ const COLUMN_DEFS: Array<{ key: keyof AttendanceRow; i18nKey: string; numeric?: 
   { key: 'attendanceDate', i18nKey: 'preview.colDate',       numeric: true },
   { key: 'actualTimeCard', i18nKey: 'preview.colActualTimeCard', raw: true },
   { key: 'absent',         i18nKey: 'preview.colAbsent',     numeric: true },
+  { key: 'overtimeHours',  i18nKey: 'preview.colOvertimeHours', numeric: true },
   { key: 'klass',          i18nKey: 'preview.colClass',      numeric: true },
   { key: 'remarks',        i18nKey: 'preview.colRemarks' },
 ];
@@ -559,6 +560,33 @@ export function buildPreviewTable(rows: AttendanceRow[]): HTMLElement {
     for (const col of COLUMN_DEFS) {
       if (col.key === 'remarks') {
         tr.appendChild(renderRemarkCell(row.remarks));
+      } else if (col.key === 'overtimeHours') {
+        const td = document.createElement('td');
+        td.className = 'col-numeric';
+        const otVal = parseFloat(row.overtimeHours || '0');
+        if (!isNaN(otVal) && otVal > 0) {
+          const badge = document.createElement('span');
+          badge.className = 'badge badge-ot';
+          badge.textContent = `${row.overtimeHours} hrs`;
+          td.appendChild(badge);
+        } else {
+          td.textContent = row.overtimeHours || '0';
+          td.style.color = 'var(--text-muted)';
+        }
+        tr.appendChild(td);
+      } else if (col.key === 'absent') {
+        const td = document.createElement('td');
+        td.className = 'col-numeric';
+        const abVal = parseFloat(row.absent || '0');
+        if (!isNaN(abVal) && abVal > 0) {
+          const badge = document.createElement('span');
+          badge.className = 'badge badge-absent';
+          badge.textContent = `${row.absent} hrs`;
+          td.appendChild(badge);
+        } else {
+          td.textContent = row.absent || '0';
+        }
+        tr.appendChild(td);
       } else {
         const td = document.createElement('td');
         const value = String(row[col.key] ?? '');

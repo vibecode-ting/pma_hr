@@ -30,7 +30,7 @@ const REQUIRED_HEADERS = [
   'Class',
 ] as const;
 
-type RequiredHeader = (typeof REQUIRED_HEADERS)[number];
+type RequiredHeader = (typeof REQUIRED_HEADERS)[number] | 'Overtime hours';
 
 /**
  * Normalize a cell value to a string.
@@ -104,6 +104,7 @@ function buildHeaderMap(sheet: XLSX.WorkSheet): Map<string, string> {
 /**
  * Given the header map, return a map from header name → column letter.
  * Validates that all required headers are present.
+ * Supports Absent in Column O or P, and Overtime hours in Column R.
  */
 function resolveColumns(
   headerMap: Map<string, string>,
@@ -113,6 +114,43 @@ function resolveColumns(
   const missing: string[] = [];
 
   for (const header of REQUIRED_HEADERS) {
+    if (header === 'Absent') {
+      // Check column 'O' and 'P' for header 'Absent'
+      const oHeader = headerMap.get('O');
+      const pHeader = headerMap.get('P');
+      if (oHeader && /^absent$/i.test(oHeader)) {
+        colMap.set('Absent', 'O');
+        continue;
+      }
+      if (pHeader && /^absent$/i.test(pHeader)) {
+        colMap.set('Absent', 'P');
+        continue;
+      }
+      // Check any column matching 'Absent'
+      let foundCol: string | null = null;
+      for (const [col, name] of headerMap) {
+        if (/^absent$/i.test(name)) {
+          foundCol = col;
+          break;
+        }
+      }
+      if (foundCol) {
+        colMap.set('Absent', foundCol);
+        continue;
+      }
+      // Fallback: if 'O' exists in sheet headers, use 'O'; otherwise 'P'
+      if (oHeader !== undefined) {
+        colMap.set('Absent', 'O');
+        continue;
+      }
+      if (pHeader !== undefined) {
+        colMap.set('Absent', 'P');
+        continue;
+      }
+      missing.push('Absent');
+      continue;
+    }
+
     let found = false;
     for (const [col, name] of headerMap) {
       if (name === header) {
@@ -122,6 +160,22 @@ function resolveColumns(
       }
     }
     if (!found) missing.push(header);
+  }
+
+  // Optional Overtime hours column (typically Column R)
+  const rHeader = headerMap.get('R');
+  if (rHeader && /overtime/i.test(rHeader)) {
+    colMap.set('Overtime hours', 'R');
+  } else {
+    for (const [col, name] of headerMap) {
+      if (/overtime\s*hours/i.test(name) || /^overtime/i.test(name)) {
+        colMap.set('Overtime hours', col);
+        break;
+      }
+    }
+    if (!colMap.has('Overtime hours') && rHeader !== undefined) {
+      colMap.set('Overtime hours', 'R');
+    }
   }
 
   return { colMap, missing };
@@ -152,7 +206,8 @@ function parseSheet(
   // Data starts at row index 2 (row 3 in 1-based; row 1 = headers, row 2 = blank)
   for (let rowIdx = 2; rowIdx <= range.e.r; rowIdx++) {
     const getCell = (header: RequiredHeader) => {
-      const col = colMap.get(header)!;
+      const col = colMap.get(header);
+      if (!col) return undefined;
       const addr = `${col}${rowIdx + 1}`; // SheetJS uses 1-based row in addresses
       return sheet[addr] as XLSX.CellObject | undefined;
     };
@@ -169,11 +224,18 @@ function parseSheet(
     const attendanceDate = normalizeAttendanceDate(getCell('Attendance Date'));
     const standardTimeCard = cellToString(getCell('Standard Time Card')); // RAW
     const actualTimeCard = cellToString(getCell('Actual Time Card')); // RAW
-    const absent = cellToString(getCell('Absent')); // RAW — do not recompute
+    const absent = cellToString(getCell('Absent')).trim();
     const klass = cellToString(getCell('Class')).trim();
 
     // Skip rows where all meaningful fields are blank
     if (!employeeId && !name && !groupCode && !attendanceDate) continue;
+
+    // Requirement #2: "My app logic need to catch only where this values is greather than 0 ."
+    const absentNum = parseFloat(absent);
+    if (isNaN(absentNum) || absentNum <= 0) continue;
+
+    const otCell = getCell('Overtime hours');
+    const overtimeHours = cellToString(otCell).trim() || '0';
 
     rows.push({
       sourceFile: fileName,
@@ -185,6 +247,7 @@ function parseSheet(
       standardTimeCard,
       actualTimeCard,
       absent,
+      overtimeHours,
       klass,
       remarks: '', // computed later by rules.ts
     });

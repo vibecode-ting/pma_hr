@@ -40,6 +40,9 @@ export interface AttendanceRow {
   /** Raw absent value from source — pass through unchanged, do not recompute */
   absent: string;
 
+  /** Raw overtime hours value from source (Column R) */
+  overtimeHours: string;
+
   /** Trimmed class value, e.g. "11" (field named `klass` because `class` is a JS keyword) */
   klass: string;
 

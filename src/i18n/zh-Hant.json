@@ -59,6 +59,7 @@
   "preview.colDate": "日期",
   "preview.colActualTimeCard": "實際打卡時間",
   "preview.colAbsent": "缺勤",
+  "preview.colOvertimeHours": "加班時數",
   "preview.colClass": "班別",
   "preview.colRemarks": "備註",
 

@@ -138,89 +138,92 @@ async function loadRulesConfig(): Promise<void> {
 
 function renderLogin(container: HTMLElement): void {
   container.innerHTML = '';
-  container.appendChild(createStarfield());
 
   const page = document.createElement('div');
-  page.className = 'page-wrapper login-page';
+  page.className = 'page-wrapper login-split-page';
 
-  // ── Floating Top Controls: Theme & Language Switchers ──
+  // ── Left Hero Panel: Unblurred Background Image & Corporate Branding ──
+  const leftPanel = document.createElement('div');
+  leftPanel.className = 'login-left-panel';
+
+  const heroImage = document.createElement('div');
+  heroImage.className = 'login-hero-image';
+  leftPanel.appendChild(heroImage);
+
+  const heroScrim = document.createElement('div');
+  heroScrim.className = 'login-hero-scrim';
+  leftPanel.appendChild(heroScrim);
+
+  const heroContent = document.createElement('div');
+  heroContent.className = 'login-hero-content';
+
+  const heroBadge = document.createElement('div');
+  heroBadge.className = 'login-hero-badge';
+  const heroLogo = document.createElement('img');
+  heroLogo.src = './pouchen_logo.png';
+  heroLogo.alt = 'Pouchen Logo';
+  heroLogo.className = 'login-hero-logo';
+  heroBadge.appendChild(heroLogo);
+
+  const heroCompany = document.createElement('span');
+  heroCompany.setAttribute('data-i18n', 'app.company');
+  heroCompany.textContent = t('app.company');
+  heroBadge.appendChild(heroCompany);
+  heroContent.appendChild(heroBadge);
+
+  const heroHeadline = document.createElement('h1');
+  heroHeadline.className = 'login-hero-headline';
+  heroHeadline.setAttribute('data-i18n', 'app.title');
+  heroHeadline.textContent = t('app.title');
+  heroContent.appendChild(heroHeadline);
+
+  leftPanel.appendChild(heroContent);
+  page.appendChild(leftPanel);
+
+  // ── Right Form Panel: Modern Login Controls & Form ──
+  const rightPanel = document.createElement('div');
+  rightPanel.className = 'login-right-panel';
+
+  // Panel Top: Brand on mobile + Theme & Language Switchers
+  const panelTop = document.createElement('div');
+  panelTop.className = 'login-panel-top';
+
+  const mobileBrand = document.createElement('div');
+  mobileBrand.className = 'login-panel-brand-mobile';
+  const mobileLogo = document.createElement('img');
+  mobileLogo.src = './pouchen_logo.png';
+  mobileLogo.alt = 'Pouchen Logo';
+  mobileBrand.appendChild(mobileLogo);
+  const mobileTitle = document.createElement('span');
+  mobileTitle.setAttribute('data-i18n', 'app.shortTitle');
+  mobileTitle.textContent = t('app.shortTitle');
+  mobileBrand.appendChild(mobileTitle);
+  panelTop.appendChild(mobileBrand);
+
   const topControls = document.createElement('div');
   topControls.className = 'login-top-controls';
-
+  topControls.style.position = 'static';
   topControls.appendChild(buildThemeSwitcher(getTheme, (th) => setTheme(th)));
-
   const divider = document.createElement('div');
   divider.className = 'login-ctrl-divider';
   topControls.appendChild(divider);
-
   topControls.appendChild(buildLangSwitcher(getLocale, (l) => { setLocale(l); applyAll(); }));
-  page.appendChild(topControls);
+  panelTop.appendChild(topControls);
 
-  // ── Two-Column Login Container ──
-  const splitCard = document.createElement('div');
-  splitCard.className = 'login-split-card';
+  rightPanel.appendChild(panelTop);
 
-  // ── Left Column: Hero Pane with background image, glassy overlay, and logo ──
-  const heroPane = document.createElement('div');
-  heroPane.className = 'login-hero-pane';
-
-  const heroBg = document.createElement('div');
-  heroBg.className = 'login-hero-bg';
-  heroBg.style.backgroundImage = "url('./login-bg.jpeg')";
-  heroPane.appendChild(heroBg);
-
-  const heroOverlay = document.createElement('div');
-  heroOverlay.className = 'login-hero-overlay';
-
-  const logoContainer = document.createElement('div');
-  logoContainer.className = 'login-logo-container';
-  const brandLogo = document.createElement('img');
-  brandLogo.src = './pouchen_logo.png';
-  brandLogo.alt = 'Pouchen Logo';
-  brandLogo.className = 'login-brand-logo';
-  logoContainer.appendChild(brandLogo);
-  heroOverlay.appendChild(logoContainer);
-
-  const heroText = document.createElement('div');
-  heroText.className = 'login-hero-text';
-
-  const companyEl = document.createElement('div');
-  companyEl.className = 'login-company-name';
-  companyEl.setAttribute('data-i18n', 'app.company');
-  companyEl.textContent = t('app.company');
-  heroText.appendChild(companyEl);
-
-  const heroBrand = document.createElement('div');
-  heroBrand.className = 'login-hero-brand';
-  heroBrand.setAttribute('data-i18n', 'app.shortTitle');
-  heroBrand.textContent = t('app.shortTitle');
-  heroText.appendChild(heroBrand);
-
-  const portalTitle = document.createElement('h1');
-  portalTitle.className = 'login-portal-title';
-  portalTitle.setAttribute('data-i18n', 'app.title');
-  portalTitle.textContent = t('app.title');
-  heroText.appendChild(portalTitle);
-
-  const subtitle = document.createElement('div');
-  subtitle.className = 'login-subtitle text-secondary';
-  subtitle.setAttribute('data-i18n', 'login.subtitle');
-  subtitle.textContent = t('login.subtitle');
-  heroText.appendChild(subtitle);
-
-  heroOverlay.appendChild(heroText);
-  heroPane.appendChild(heroOverlay);
-  splitCard.appendChild(heroPane);
-
-  // ── Right Column: Form Pane ──
-  const formPane = document.createElement('div');
-  formPane.className = 'login-form-pane';
-
-  const formInner = document.createElement('div');
-  formInner.className = 'login-form-inner';
+  // Center Form Container
+  const formContainer = document.createElement('div');
+  formContainer.className = 'login-form-container';
 
   const formHeader = document.createElement('div');
   formHeader.className = 'login-form-header';
+
+  const formTag = document.createElement('div');
+  formTag.className = 'login-form-tag';
+  formTag.setAttribute('data-i18n', 'app.shortTitle');
+  formTag.textContent = t('app.shortTitle');
+  formHeader.appendChild(formTag);
 
   const formTitle = document.createElement('h2');
   formTitle.className = 'login-form-title';
@@ -228,14 +231,14 @@ function renderLogin(container: HTMLElement): void {
   formTitle.textContent = t('login.submit');
   formHeader.appendChild(formTitle);
 
-  const formSub = document.createElement('p');
-  formSub.className = 'login-form-sub';
-  formSub.setAttribute('data-i18n', 'login.subtitle');
-  formSub.textContent = t('login.subtitle');
-  formHeader.appendChild(formSub);
+  const formDesc = document.createElement('p');
+  formDesc.className = 'login-form-desc';
+  formDesc.textContent = 'Enter your credentials to access the attendance system';
+  formHeader.appendChild(formDesc);
 
-  formInner.appendChild(formHeader);
+  formContainer.appendChild(formHeader);
 
+  // Form Fields
   const userGroup = document.createElement('div');
   userGroup.className = 'form-group';
   const userLabel = document.createElement('label');
@@ -253,7 +256,7 @@ function renderLogin(container: HTMLElement): void {
   userInput.setAttribute('data-i18n-placeholder', 'login.username');
   userInput.placeholder = t('login.username');
   userGroup.appendChild(userInput);
-  formInner.appendChild(userGroup);
+  formContainer.appendChild(userGroup);
 
   const passGroup = document.createElement('div');
   passGroup.className = 'form-group';
@@ -272,7 +275,7 @@ function renderLogin(container: HTMLElement): void {
   passInput.setAttribute('data-i18n-placeholder', 'login.password');
   passInput.placeholder = t('login.password');
   passGroup.appendChild(passInput);
-  formInner.appendChild(passGroup);
+  formContainer.appendChild(passGroup);
 
   const errorEl = document.createElement('div');
   errorEl.className = 'form-error hidden';
@@ -282,24 +285,26 @@ function renderLogin(container: HTMLElement): void {
   errorText.setAttribute('data-i18n', 'login.error');
   errorText.textContent = t('login.error');
   errorEl.appendChild(errorText);
-  formInner.appendChild(errorEl);
+  formContainer.appendChild(errorEl);
 
   const submitBtn = document.createElement('button');
   submitBtn.type = 'submit'; submitBtn.id = 'login-submit';
-  submitBtn.className = 'btn btn-primary btn-full';
-  submitBtn.style.marginTop = '8px';
+  submitBtn.className = 'btn btn-primary btn-full login-btn';
   submitBtn.setAttribute('data-i18n', 'login.submit');
   submitBtn.textContent = t('login.submit');
-  formInner.appendChild(submitBtn);
+  formContainer.appendChild(submitBtn);
 
-  formPane.appendChild(formInner);
-  splitCard.appendChild(formPane);
+  // Resources chips
+  if (appConfig?.resources && appConfig.resources.length > 0) {
+    const resBar = buildResourcesBar(appConfig.resources);
+    if (resBar) formContainer.appendChild(resBar);
+  }
 
-  page.appendChild(splitCard);
+  rightPanel.appendChild(formContainer);
 
-  // ── Footer: Copyright + Developer credits ──
-  const footer = document.createElement('footer');
-  footer.className = 'login-footer';
+  // Panel Footer
+  const panelFooter = document.createElement('footer');
+  panelFooter.className = 'login-panel-footer';
 
   const footerLine1 = document.createElement('div');
   footerLine1.className = 'login-footer-line';
@@ -309,10 +314,11 @@ function renderLogin(container: HTMLElement): void {
   footerLine2.className = 'login-footer-line';
   footerLine2.innerHTML = `© Developed by <a href="mailto:ting.hah@pouchen.com.mm" class="credit-link">ting | Htet Aung Hlaing</a> | <a href="mailto:mpc.erp@pouchen.com.mm" class="credit-link">MM PCB IT Team</a>`;
 
-  footer.appendChild(footerLine1);
-  footer.appendChild(footerLine2);
+  panelFooter.appendChild(footerLine1);
+  panelFooter.appendChild(footerLine2);
+  rightPanel.appendChild(panelFooter);
 
-  page.appendChild(footer);
+  page.appendChild(rightPanel);
   container.appendChild(page);
 
   const doLogin = async () => {
