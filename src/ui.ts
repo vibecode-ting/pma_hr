@@ -7,7 +7,7 @@
  */
 
 import { t } from './i18n';
-import type { AttendanceRow, ExportMode, ResourceLink, Theme, LiveFilterState } from './types';
+import type { AttendanceRow, ExportMode, LiveFilterState, Theme, RulesConfig, ResourceLink } from './types';
 import { exportPreviewSummary } from './export';
 import {
   REMARK_NO_RECORD,
@@ -508,16 +508,16 @@ function renderRemarkCell(remark: string): HTMLTableCellElement {
 
   if (remark.includes('ညဆိုင္း')) {
     badge.className = 'badge badge-night';
-    badge.innerHTML = `🌙 <span class="remark-text zawgyi-font">${remark}</span>`;
+    badge.innerHTML = `🌙 <span class="remark-text myanmar-unicode-font">${remark}</span>`;
   } else if (isRemarkGreen(remark)) {
     badge.className = 'badge badge-green';
-    badge.innerHTML = `<span class="remark-icon">✓</span> <span class="remark-text zawgyi-font">${remark}</span>`;
+    badge.innerHTML = `<span class="remark-icon">✓</span> <span class="remark-text myanmar-unicode-font">${remark}</span>`;
   } else if (isRemarkRed(remark)) {
     badge.className = 'badge badge-danger badge-red';
-    badge.innerHTML = `${icons.alertTriangle || '⚠'} <span class="remark-text zawgyi-font">${remark}</span>`;
+    badge.innerHTML = `${icons.alertTriangle || '⚠'} <span class="remark-text myanmar-unicode-font">${remark}</span>`;
   } else {
     badge.className = 'badge badge-warning';
-    badge.innerHTML = `${icons.clockAlert || '⏰'} <span class="remark-text zawgyi-font">${remark}</span>`;
+    badge.innerHTML = `${icons.clockAlert || '⏰'} <span class="remark-text myanmar-unicode-font">${remark}</span>`;
   }
 
   badge.title = remark;
@@ -639,6 +639,7 @@ export function buildLivePreviewSection(
   rows: AttendanceRow[],
   activeFilter: LiveFilterState,
   onFilterChange: (filter: LiveFilterState) => void,
+  rulesConfig: RulesConfig,
   callbacks?: {
     onResetAll?: () => void;
     onDownload?: (btn: HTMLButtonElement) => void;
@@ -886,19 +887,21 @@ export function buildLivePreviewSection(
   remSelect.className = 'filter-select';
 
   const remChoices: Array<{ value: string; label: string }> = [
-    { value: '', label: `— All Remarks —` },
+    { value: '', label: t('settings.filterAllRemarks') || '— All Remarks —' },
     { value: '__HAS_REMARK__', label: t('filter.withRemarks') || 'With Remarks' },
     { value: '__NO_REMARK__', label: t('filter.noRemarks') || 'No Remarks' },
-    { value: 'ညဆိုင္း', label: 'ညဆိုင္း (Night Shift)' },
-    { value: 'ခြင့္တိုင္ရန္', label: 'ခြင့္တိုင္ရန္ (Leave Needed)' },
-    { value: 'ခြင့္တိုင္ၿပီး', label: 'ခြင့္တိုင္ၿပီး (Leave Applied)' },
-    { value: 'အိုတီတင္ရန္', label: 'အိုတီတင္ရန္ (OT Needed)' },
-    { value: 'အိုတီတင္ပီး', label: 'အိုတီတင္ပီး (OT Applied)' },
-    { value: 'အထြက္တိုင္းကဒ် မရွိပါ', label: 'အထြက္တိုင္းကဒ် မရွိပါ (No Checkout)' },
-    { value: 'အဝင္တိုင္းကဒ် မရွိပါ', label: 'အဝင္တိုင္းကဒ် မရွိပါ (No Checkin)' },
+    { value: rulesConfig.remarkNightShift, label: rulesConfig.remarkNightShift + ' (Night Shift)' },
+    { value: rulesConfig.remarkLateSuffix, label: rulesConfig.remarkLateSuffix + ' (Late/Leave Needed)' },
+    { value: rulesConfig.remarkLeaveApplied || 'ခွင့်တိုင်ပြီး', label: (rulesConfig.remarkLeaveApplied || 'ခွင့်တိုင်ပြီး') + ' (Leave Applied)' },
+    { value: rulesConfig.remarkOtSuffix, label: rulesConfig.remarkOtSuffix + ' (OT Needed)' },
+    { value: rulesConfig.remarkOtApplied || 'အိုတီတင်ပီး', label: (rulesConfig.remarkOtApplied || 'အိုတီတင်ပီး') + ' (OT Applied)' },
+    { value: rulesConfig.remarkNoCheckout, label: rulesConfig.remarkNoCheckout + ' (No Checkout)' },
+    { value: rulesConfig.remarkNoCheckin, label: rulesConfig.remarkNoCheckin + ' (No Checkin)' },
+    { value: rulesConfig.remarkNoRecord, label: rulesConfig.remarkNoRecord + ' (No Record/Absent)' },
   ];
 
   for (const c of remChoices) {
+    if (!c.value && c.label !== (t('settings.filterAllRemarks') || '— All Remarks —')) continue;
     const opt = document.createElement('option');
     opt.value = c.value;
     opt.textContent = c.label;

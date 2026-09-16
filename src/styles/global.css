@@ -45,6 +45,11 @@
   font-display: swap;
 }
 
+/* ── Unicode Myanmar font for generated remarks (not from XLS) ──────────── */
+.myanmar-unicode-font {
+  font-family: 'Noto Sans Myanmar', 'Myanmar Text', 'Padauk', sans-serif !important;
+}
+
 /* ── Base reset ───────────────────────────────────────────────────────────── */
 
 *, *::before, *::after {
@@ -2207,9 +2212,13 @@ h1, h2, h3, h4, h5 {
 .live-preview-table tbody td,
 .preview-table tbody td.col-raw-data,
 .preview-table tbody .zawgyi-font,
-.live-preview-table tbody .zawgyi-font,
-.col-remark-cell .remark-text.zawgyi-font {
+.live-preview-table tbody .zawgyi-font {
   font-family: 'Zawgyi-One', 'Zawgyi01', 'Masterpiece Uni Sans', sans-serif !important;
+}
+
+/* Remarks are generated as Unicode Myanmar — use Unicode font */
+.col-remark-cell .remark-text.myanmar-unicode-font {
+  font-family: 'Noto Sans Myanmar', 'Myanmar Text', 'Padauk', sans-serif !important;
 }
 
 .preview-table thead th,

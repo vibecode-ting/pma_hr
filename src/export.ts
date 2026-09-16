@@ -87,16 +87,19 @@ export function buildWorkbook(rows: AttendanceRow[]): XLSX.WorkBook {
   // Column widths
   ws['!cols'] = OUTPUT_HEADERS.map((h) => ({ wch: COLUMN_WIDTHS[h] ?? 16 }));
 
-  // Force Zawgyi-One font across all worksheet cells
+  // Apply fonts: Zawgyi-One for raw XLS data (Name etc.), Myanmar Text (Unicode) for generated Remarks (col 9)
+  const REMARKS_COL = 9; // 0-based index of Remarks column
   const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
   for (let R = range.s.r; R <= range.e.r; ++R) {
     for (let C = range.s.c; C <= range.e.c; ++C) {
       const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
       if (!ws[cellAddress]) continue;
       const isHeader = R === 0;
+      // Remarks column uses Unicode Myanmar font; all others use Zawgyi-One
+      const fontName = (C === REMARKS_COL && !isHeader) ? 'Myanmar Text' : 'Zawgyi-One';
       ws[cellAddress].s = {
         font: {
-          name: 'Zawgyi-One',
+          name: fontName,
           sz: isHeader ? 11 : 10,
           bold: isHeader,
         },

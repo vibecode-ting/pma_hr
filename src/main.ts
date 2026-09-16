@@ -24,6 +24,7 @@ import {
   REMARK_NO_CHECKIN,
   REMARK_OT_SUFFIX,
   REMARK_OT_APPLIED,
+  REMARK_NIGHT_SHIFT,
   isRowResolved,
   isRemarkGreen,
   isRemarkRed,
@@ -62,6 +63,7 @@ let defaultRulesConfig: RulesConfig = {
   remarkNoCheckin: REMARK_NO_CHECKIN,
   remarkOtSuffix: REMARK_OT_SUFFIX,
   remarkOtApplied: REMARK_OT_APPLIED,
+  remarkNightShift: REMARK_NIGHT_SHIFT,
   shifts: JSON.parse(JSON.stringify(DEFAULT_SHIFTS)),
 };
 let rulesConfig: RulesConfig = JSON.parse(JSON.stringify(defaultRulesConfig));
@@ -148,8 +150,10 @@ async function loadRulesConfig(): Promise<void> {
         remarkNoRecord: data.remarkNoRecord ?? REMARK_NO_RECORD,
         remarkLeaveApplied: data.remarkLeaveApplied ?? REMARK_LEAVE_APPLIED,
         remarkNoCheckout: data.remarkNoCheckout !== undefined ? data.remarkNoCheckout : REMARK_NO_CHECKOUT,
+        remarkNoCheckin: data.remarkNoCheckin !== undefined ? data.remarkNoCheckin : REMARK_NO_CHECKIN,
         remarkOtSuffix: data.remarkOtSuffix ?? REMARK_OT_SUFFIX,
         remarkOtApplied: data.remarkOtApplied ?? REMARK_OT_APPLIED,
+        remarkNightShift: data.remarkNightShift ?? REMARK_NIGHT_SHIFT,
         shifts: Array.isArray(data.shifts) && data.shifts.length > 0 ? data.shifts : JSON.parse(JSON.stringify(DEFAULT_SHIFTS)),
       };
       rulesConfig = JSON.parse(JSON.stringify(defaultRulesConfig));
@@ -811,20 +815,11 @@ function renderApp(container: HTMLElement): void {
   // Rules Configuration button in sidebar (between Help and Logout)
   const rulesConfigBtn = document.createElement('button');
   rulesConfigBtn.className = 'sidebar-action-btn';
-  rulesConfigBtn.innerHTML = `${icons.settings || '⚙'} <span data-i18n="nav.rulesConfig">${t('nav.rulesConfig')}</span>`;
+  rulesConfigBtn.innerHTML = `${icons.settings || '⚙'} <span data-i18n="nav.settings">${t('nav.settings') || 'Settings'}</span>`;
   rulesConfigBtn.addEventListener('click', () => {
     openRulesConfigModal();
   });
   sidebar.appendChild(rulesConfigBtn);
-
-  // Settings button in sidebar
-  const settingsBtn = document.createElement('button');
-  settingsBtn.className = 'sidebar-action-btn';
-  settingsBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> <span data-i18n="nav.settings">${t('nav.settings') || 'Settings'}</span>`;
-  settingsBtn.addEventListener('click', () => {
-    openSettingsModal('liveview');
-  });
-  sidebar.appendChild(settingsBtn);
 
   sidebar.appendChild(sidebarDivider());
 
@@ -1053,11 +1048,14 @@ function renderApp(container: HTMLElement): void {
       if (allRows.length > 0) {
         applyRemarks(allRows, undefined, rulesConfig);
         updateExportPreview();
+        if (activeTab === 2) {
+          renderContent();
+        }
       }
     };
 
     const field = (
-      key: 'graceMinutes' | 'earlyOutGraceMinutes' | 'otThresholdMinutes' | 'remarkLateSuffix' | 'remarkNoRecord' | 'remarkLeaveApplied' | 'remarkNoCheckout' | 'remarkOtSuffix' | 'remarkOtApplied',
+      key: 'graceMinutes' | 'earlyOutGraceMinutes' | 'otThresholdMinutes' | 'remarkLateSuffix' | 'remarkNoRecord' | 'remarkLeaveApplied' | 'remarkNoCheckout' | 'remarkNoCheckin' | 'remarkNightShift' | 'remarkOtSuffix' | 'remarkOtApplied',
       id: string,
       labelText: string,
       type: 'text' | 'number' = 'text'
@@ -1105,13 +1103,17 @@ function renderApp(container: HTMLElement): void {
     // General thresholds & remarks grid
     const grid = document.createElement('div');
     grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:var(--space-3);margin-bottom:var(--space-4);';
-    grid.appendChild(field('graceMinutes', 'rule-grace', 'Check-in Grace (Minutes)', 'number'));
-    grid.appendChild(field('earlyOutGraceMinutes', 'rule-early-grace', 'Early Out Grace (Minutes)', 'number'));
-    grid.appendChild(field('otThresholdMinutes', 'rule-ot-threshold', 'OT Threshold (Minutes past end)', 'number'));
-    grid.appendChild(field('remarkLateSuffix', 'rule-late', 'Leave Needed Suffix (ခွင့်တိုင်ရန်)'));
-    grid.appendChild(field('remarkLeaveApplied', 'rule-leave-applied', 'Leave Done Suffix (ခွင့်တိုင်ပြီး)'));
-    grid.appendChild(field('remarkOtSuffix', 'rule-ot-suffix', 'OT Needed Suffix (အိုတီတင်ရန်)'));
-    grid.appendChild(field('remarkOtApplied', 'rule-ot-applied', 'OT Done Suffix (အိုတီတင်ပြီး)'));
+    grid.appendChild(field('graceMinutes', 'rule-grace', t('settings.rulesGrace') || 'Check-in Grace (Minutes)', 'number'));
+    grid.appendChild(field('earlyOutGraceMinutes', 'rule-early-grace', t('settings.rulesEarlyGrace') || 'Early Out Grace (Minutes)', 'number'));
+    grid.appendChild(field('otThresholdMinutes', 'rule-ot-threshold', t('settings.rulesOtThreshold') || 'OT Threshold (Minutes past end)', 'number'));
+    grid.appendChild(field('remarkLateSuffix', 'rule-late', t('settings.rulesLateLabel') || 'Leave Needed Suffix (ခွင့်တိုင်ရန်)'));
+    grid.appendChild(field('remarkLeaveApplied', 'rule-leave-applied', t('settings.rulesLeaveApplied') || 'Leave Done Suffix (ခွင့်တိုင်ပြီး)'));
+    grid.appendChild(field('remarkOtSuffix', 'rule-ot-suffix', t('settings.rulesOtSuffix') || 'OT Needed Suffix (အိုတီတင်ရန်)'));
+    grid.appendChild(field('remarkOtApplied', 'rule-ot-applied', t('settings.rulesOtApplied') || 'OT Done Suffix (အိုတီတင်ပြီး)'));
+    grid.appendChild(field('remarkNoRecord', 'rule-no-record', t('settings.rulesNoRecord') || 'No Record Remark'));
+    grid.appendChild(field('remarkNoCheckout', 'rule-no-checkout', t('settings.rulesNoCheckout') || 'No Checkout Remark'));
+    grid.appendChild(field('remarkNoCheckin', 'rule-no-checkin', t('settings.rulesNoCheckin') || 'No Checkin Remark'));
+    grid.appendChild(field('remarkNightShift', 'rule-night-shift', t('settings.rulesNightShift') || 'Night Shift Remark'));
     panel.appendChild(grid);
 
     // Shift Schedule Section
@@ -1304,6 +1306,8 @@ function renderApp(container: HTMLElement): void {
       if (inputs.remarkOtSuffix) inputs.remarkOtSuffix.value = rulesConfig.remarkOtSuffix;
       if (inputs.remarkOtApplied) inputs.remarkOtApplied.value = rulesConfig.remarkOtApplied ?? 'အိုတီတင်ပီး';
       if (inputs.remarkNoCheckout) inputs.remarkNoCheckout.value = rulesConfig.remarkNoCheckout;
+      if (inputs.remarkNoCheckin) inputs.remarkNoCheckin.value = rulesConfig.remarkNoCheckin;
+      if (inputs.remarkNightShift) inputs.remarkNightShift.value = rulesConfig.remarkNightShift;
       rebuildShiftTable();
       reapplyRulesAndRefresh();
       showToast('All rules and shifts reset to defaults ✅', 'success');
@@ -1361,7 +1365,7 @@ function renderApp(container: HTMLElement): void {
     };
 
     const visibleRows = getVisibleRows();
-    return buildLivePreviewSection(visibleRows, activeFilter, (f) => { activeFilter = f; }, callbacks);
+    return buildLivePreviewSection(visibleRows, activeFilter, (f) => { activeFilter = f; }, rulesConfig, callbacks);
   }
 
   // ── Content render ──
