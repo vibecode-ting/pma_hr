@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
+  "version": "Beta - TEST",
   "appTitle": "Pouchen Myanmar Adidas B150 | HR-Portal",
   "accounts": [
     { "username": "demo", "password": "demo123", "displayName": "Demo User" },
@@ -8,8 +8,6 @@
     { "username": "it", "password": "admin", "displayName": "IT-PCB" }
   ],
   "resources": [
-    { "label": "APP Source Code", "url": "https://examplesourcecode.com" },
-    { "label": "Feedback the app", "url": "https://typeform.com" },
     { "label": "ting.hah@pouchen.com.mm", "url": "mailto:ting.hah@pouchen.com.mm" },
     { "label": "mpc.erp@pouchen.com.mm", "url": "mailto:mpc.erp@pouchen.com.mm" }
   ]

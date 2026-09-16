@@ -87,6 +87,9 @@ export interface LiveFilterState {
   absent?: string;
   overtime?: string;
   hideResolved?: boolean;
+  hideFutureShifts?: boolean;
+  hideApplied?: boolean;
+  hideNoCheckout?: boolean;
 }
 
 /**
@@ -134,10 +137,12 @@ export interface RulesConfig {
   remarkLateSuffix: string;
   remarkNoRecord: string;
   remarkNoCheckout: string;
+  remarkNoCheckin?: string;
   remarkOtSuffix: string;
   remarkLeaveApplied?: string;
   remarkOtApplied?: string;
   remarkLate?: string;
+  remarkNightShift?: string;
   shifts: ShiftConfig[];
 }
 

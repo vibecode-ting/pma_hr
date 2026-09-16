@@ -19,8 +19,31 @@
 @import '@fontsource/noto-sans-tc/500.css';
 @import '@fontsource/noto-sans-tc/700.css';
 
-/* ── Token imports ────────────────────────────────────────────────────────── */
+/* ── Token imports (MUST precede any non-import rules) ───────────────────── */
 @import './tokens.css';
+
+/* ── Embedded Zawgyi-One font for data contents only ─────────────────────── */
+@font-face {
+  font-family: 'Zawgyi-One';
+  src: local('Zawgyi-One'),
+       local('Zawgyi01'),
+       local('Masterpiece Uni Sans'),
+       url('/fonts/Zawgyi-One.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Zawgyi-One';
+  src: local('Zawgyi-One'),
+       local('Zawgyi01'),
+       local('Masterpiece Uni Sans'),
+       url('/fonts/Zawgyi-One.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
 
 /* ── Base reset ───────────────────────────────────────────────────────────── */
 
@@ -1928,35 +1951,109 @@ h1, h2, h3, h4, h5 {
   color: var(--gold-500);
 }
 
-.filter-hide-resolved-label {
+.filter-check-group {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.filter-check-item {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   cursor: pointer;
-  padding: 3px 10px;
+  padding: 5px 12px;
   border-radius: var(--radius-full, 9999px);
-  background: rgba(212, 175, 55, 0.12);
-  border: 1px solid rgba(212, 175, 55, 0.32);
-  color: var(--accent-gold, #D4AF37);
-  font-size: 0.76rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-hairline);
+  color: var(--text-secondary);
+  font-size: 0.78rem;
   font-weight: 600;
   user-select: none;
-  transition: all 150ms ease;
+  transition: all 180ms cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
 }
 
-.filter-hide-resolved-label:hover {
-  background: rgba(212, 175, 55, 0.2);
+.filter-check-item:hover {
+  border-color: var(--border-subtle);
+  color: var(--text-primary);
+  background: var(--bg-surface-hover, rgba(255, 255, 255, 0.05));
+  transform: translateY(-0.5px);
 }
 
-.filter-hide-resolved-label input[type="checkbox"] {
-  accent-color: #D4AF37;
+.filter-check-item input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 15px;
+  height: 15px;
+  border: 1.5px solid var(--border-subtle);
+  border-radius: 4px;
+  background: transparent;
   cursor: pointer;
+  display: grid;
+  place-content: center;
+  transition: all 150ms ease;
+  margin: 0;
+  flex-shrink: 0;
 }
 
-[data-theme="light"] .filter-hide-resolved-label {
+.filter-check-item input[type="checkbox"]::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  transform: scale(0);
+  transition: 120ms transform ease-in-out;
+  box-shadow: inset 1em 1em var(--gold-400, #E6C875);
+  transform-origin: center;
+  clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+}
+
+.filter-check-item input[type="checkbox"]:checked {
+  background: rgba(212, 175, 55, 0.18);
+  border-color: var(--accent-gold, #D4AF37);
+}
+
+.filter-check-item input[type="checkbox"]:checked::before {
+  transform: scale(1);
+}
+
+.filter-check-item:has(input[type="checkbox"]:checked) {
+  background: rgba(212, 175, 55, 0.12);
+  border-color: rgba(212, 175, 55, 0.42);
+  color: var(--accent-gold, #E6C875);
+  box-shadow: 0 0 8px rgba(212, 175, 55, 0.16);
+}
+
+[data-theme="light"] .filter-check-item {
+  background: #FFFFFF;
+  border-color: #E2E8F0;
+  color: #475569;
+}
+
+[data-theme="light"] .filter-check-item:hover {
+  background: #F8FAFC;
+  color: #1E293B;
+}
+
+[data-theme="light"] .filter-check-item input[type="checkbox"] {
+  border-color: #CBD5E1;
+}
+
+[data-theme="light"] .filter-check-item input[type="checkbox"]:checked {
+  background: #0F2D6B;
+  border-color: #0F2D6B;
+}
+
+[data-theme="light"] .filter-check-item input[type="checkbox"]::before {
+  box-shadow: inset 1em 1em #FFFFFF;
+}
+
+[data-theme="light"] .filter-check-item:has(input[type="checkbox"]:checked) {
   background: rgba(15, 45, 107, 0.08);
-  border-color: rgba(15, 45, 107, 0.25);
+  border-color: rgba(15, 45, 107, 0.3);
   color: #0F2D6B;
+  box-shadow: 0 1px 3px rgba(15, 45, 107, 0.12);
 }
 
 .filter-grid {
@@ -2096,23 +2193,95 @@ h1, h2, h3, h4, h5 {
 }
 
 /**
- * IMPORTANT — Zawgyi font-stack exception for raw data cells:
- *
- * The preview table displays raw values from the uploaded Excel files, which use
- * Zawgyi encoding (confirmed: embedded font "Zawgyi-One" in the source .xls).
- * Zawgyi and Unicode Myanmar text look similar but are byte-incompatible.
- *
- * We deliberately do NOT apply the curated `Noto Sans Myanmar` Unicode font stack
- * to these cells. Instead, we use a plain `font-family: sans-serif` stack so the
- * browser's default Myanmar font substitution takes over — browsers tend to handle
- * Zawgyi more gracefully when the system's native font (often Zawgyi-tolerant on
- * Myanmar-locale Windows installs) is allowed to engage.
- *
- * Do NOT change this to 'Noto Sans Myanmar' for .preview-table td — that would force
- * Unicode shaping onto Zawgyi bytes and produce garbled output.
+ * Zawgyi-One font enforcement for Live Preview table and remarks:
+ * Live preview table displays data and computed remarks in Zawgyi encoding.
+ * We forcibly apply Zawgyi-One font across all table elements.
  */
-.preview-table td.col-raw-data {
-  font-family: sans-serif; /* Zawgyi-tolerant plain-font exception ONLY for raw uploaded data */
+/**
+ * Zawgyi-One font exception:
+ * ONLY applied to the actual data contents inside the live view table rows
+ * (employee raw data and computed Myanmar remarks).
+ * App UI, navigation, panels, and table headers use standard --font-ui.
+ */
+.preview-table tbody td,
+.live-preview-table tbody td,
+.preview-table tbody td.col-raw-data,
+.preview-table tbody .zawgyi-font,
+.live-preview-table tbody .zawgyi-font,
+.col-remark-cell .remark-text.zawgyi-font {
+  font-family: 'Zawgyi-One', 'Zawgyi01', 'Masterpiece Uni Sans', sans-serif !important;
+}
+
+.preview-table thead th,
+.live-preview-table thead th {
+  font-family: var(--font-ui) !important;
+}
+
+/* ── Serial No Column & Summary Bar ────────────────────────────────────────── */
+
+.col-serial-header,
+.col-serial-no {
+  width: 50px !important;
+  min-width: 50px !important;
+  max-width: 65px !important;
+  text-align: center !important;
+}
+
+.live-table-summary-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 8px 14px;
+  margin: 10px 0 6px 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md, 8px);
+}
+
+.summary-stat-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.stat-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill, 9999px);
+  font-size: 0.76rem;
+  font-weight: 500;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-hairline);
+  color: var(--text-secondary);
+}
+
+.stat-badge.stat-total {
+  border-color: rgba(212, 175, 55, 0.35);
+  background: rgba(212, 175, 55, 0.1);
+  color: var(--accent-gold, #E6C875);
+}
+
+.stat-badge.stat-filtered {
+  border-color: rgba(59, 130, 246, 0.35);
+  background: rgba(59, 130, 246, 0.1);
+  color: #60A5FA;
+}
+
+.stat-badge.stat-hidden {
+  border-color: rgba(148, 163, 184, 0.2);
+  background: rgba(148, 163, 184, 0.06);
+  color: var(--text-muted);
+}
+
+.summary-hint-text {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-weight: 500;
 }
 
 /* ── Remark badges ────────────────────────────────────────────────────────── */
@@ -2121,11 +2290,38 @@ h1, h2, h3, h4, h5 {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  padding: 2px 8px;
+  padding: 3px 9px;
   border-radius: var(--radius-pill);
   font-size: 0.75rem;
   font-weight: 600;
   white-space: nowrap;
+  font-family: var(--font-ui);
+}
+
+.badge-green {
+  background: rgba(16, 185, 129, 0.16);
+  color: #10B981;
+  border: 1px solid rgba(16, 185, 129, 0.38);
+}
+
+[data-theme="light"] .badge-green {
+  background: rgba(16, 185, 129, 0.12);
+  color: #047857;
+  border-color: rgba(16, 185, 129, 0.32);
+}
+
+.badge-danger,
+.badge-red {
+  background: rgba(239, 68, 68, 0.16);
+  color: #EF4444;
+  border: 1px solid rgba(239, 68, 68, 0.38);
+}
+
+[data-theme="light"] .badge-danger,
+[data-theme="light"] .badge-red {
+  background: rgba(239, 68, 68, 0.10);
+  color: #DC2626;
+  border-color: rgba(239, 68, 68, 0.28);
 }
 
 .badge-warning {
@@ -2134,10 +2330,25 @@ h1, h2, h3, h4, h5 {
   border: 1px solid rgba(224, 169, 59, 0.3);
 }
 
-.badge-danger {
-  background: rgba(229, 85, 95, 0.15);
-  color: var(--danger);
-  border: 1px solid rgba(229, 85, 95, 0.3);
+.badge-night {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 0.78rem;
+  font-weight: 700;
+  background: rgba(139, 92, 246, 0.18);
+  color: #C4B5FD;
+  border: 1px solid rgba(139, 92, 246, 0.45);
+  box-shadow: 0 0 8px rgba(139, 92, 246, 0.2);
+}
+
+[data-theme="light"] .badge-night {
+  background: rgba(109, 40, 217, 0.12);
+  color: #6D28D9;
+  border-color: rgba(109, 40, 217, 0.35);
+  box-shadow: 0 1px 3px rgba(109, 40, 217, 0.15);
 }
 
 .badge-muted {
@@ -2272,6 +2483,93 @@ h1, h2, h3, h4, h5 {
 @keyframes modal-slide-in {
   from { opacity: 0; transform: translateY(16px) scale(0.98); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ── Settings Modal Tabs & Sections ────────────────────────────────────────── */
+.settings-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+  cursor: pointer;
+  background: transparent;
+  color: var(--text-secondary);
+  transition: var(--transition-fast);
+}
+
+.settings-tab-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-inset);
+}
+
+.settings-tab-btn.active {
+  background: var(--gold-500);
+  color: #000;
+  border-color: var(--gold-500);
+}
+
+[data-theme="light"] .settings-tab-btn.active {
+  background: #0284C7;
+  color: #FFF;
+  border-color: #0284C7;
+}
+
+.settings-group-card {
+  background: var(--bg-panel-raised);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.settings-group-title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--gold-500);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+[data-theme="light"] .settings-group-title {
+  color: #0284C7;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-hairline);
+}
+
+.settings-row:last-child {
+  border-bottom: none;
+}
+
+.settings-row-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.settings-row-label {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.settings-row-desc {
+  font-size: 0.76rem;
+  color: var(--text-muted);
 }
 
 /* ── Help panel (collapsible) ─────────────────────────────────────────────── */
@@ -2433,4 +2731,155 @@ h1, h2, h3, h4, h5 {
     gap: var(--space-2);
   }
 }
+
+/* ── Live View Table Excel Grid & Zawgyi Support ───────────────────────── */
+
+.preview-table th.col-header-centered {
+  text-align: center !important;
+}
+
+.live-preview-table.grid-enabled th,
+.live-preview-table.grid-enabled td {
+  border-right: 1px solid var(--border-hairline) !important;
+  border-bottom: 1px solid var(--border-hairline) !important;
+}
+
+.live-preview-table.grid-enabled th:last-child,
+.live-preview-table.grid-enabled td:last-child {
+  border-right: none !important;
+}
+
+.preview-table tbody .zawgyi-font,
+.preview-table tbody .col-zawgyi-font,
+.preview-table tbody .col-raw-data {
+  font-family: 'Zawgyi-One', 'Masterpiece Uni Sans', 'Segoe UI', system-ui, sans-serif !important;
+}
+
+/* ── Remarks Badges: Green for Done, Red for Needed/Missing ─────────────── */
+
+.badge-green {
+  background: rgba(34, 197, 94, 0.15) !important;
+  color: #22c55e !important;
+  border: 1px solid rgba(34, 197, 94, 0.4) !important;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+[data-theme="light"] .badge-green {
+  background: rgba(22, 163, 74, 0.12) !important;
+  color: #16a34a !important;
+  border: 1px solid rgba(22, 163, 74, 0.35) !important;
+}
+
+.badge-red, .badge-danger {
+  background: rgba(239, 68, 68, 0.15) !important;
+  color: #ef4444 !important;
+  border: 1px solid rgba(239, 68, 68, 0.4) !important;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+[data-theme="light"] .badge-red, [data-theme="light"] .badge-danger {
+  background: rgba(220, 38, 38, 0.12) !important;
+  color: #dc2626 !important;
+  border: 1px solid rgba(220, 38, 38, 0.35) !important;
+}
+
+/* ── Header Circular Glowing Impact Generate Button ─────────────────────── */
+
+.header-download-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  border-radius: var(--radius-pill);
+  font-weight: 700;
+  font-size: 0.86rem;
+  color: #0B0E14;
+  background: var(--btn-primary-gradient, linear-gradient(135deg, #D4AF37 0%, #E6C766 100%));
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  box-shadow: 0 0 16px rgba(212, 175, 55, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.7);
+  animation: header-btn-pulse 3s infinite;
+}
+
+[data-theme="light"] .header-download-btn {
+  color: #FFFFFF;
+  background: linear-gradient(135deg, #0284C7 0%, #1E3A8A 100%);
+  box-shadow: 0 0 16px rgba(2, 132, 199, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
+}
+
+.header-download-btn:hover {
+  transform: translateY(-1px) scale(1.03);
+  box-shadow: 0 0 24px rgba(212, 175, 55, 0.85);
+}
+
+[data-theme="light"] .header-download-btn:hover {
+  box-shadow: 0 0 24px rgba(2, 132, 199, 0.85);
+}
+
+@keyframes header-btn-pulse {
+  0%, 100% { box-shadow: 0 0 14px rgba(212, 175, 55, 0.45); }
+  50% { box-shadow: 0 0 24px rgba(212, 175, 55, 0.85); }
+}
+
+/* ── Fullscreen Mode ─────────────────────────────────────────────────────── */
+
+body.portal-fullscreen-mode .app-header,
+body.portal-fullscreen-mode .app-sidebar,
+body.portal-fullscreen-mode .app-tab-bar {
+  display: none !important;
+}
+
+body.portal-fullscreen-mode .page-wrapper {
+  padding: 0 !important;
+  max-width: 100vw !important;
+}
+
+body.portal-fullscreen-mode .app-content-wrap {
+  padding: 10px !important;
+  max-width: 100vw !important;
+  width: 100vw !important;
+}
+
+body.portal-fullscreen-mode .live-view-fullscreen {
+  height: calc(100vh - 20px) !important;
+}
+
+body.portal-fullscreen-mode .preview-table-wrapper {
+  max-height: calc(100vh - 160px) !important;
+}
+
+/* ── Compact Filter Panel ────────────────────────────────────────────────── */
+
+.filter-panel {
+  padding: 10px 14px !important;
+}
+
+.filter-panel-header {
+  margin-bottom: 8px !important;
+}
+
+.filter-grid {
+  gap: 8px !important;
+}
+
+.filter-input, .filter-select {
+  height: 32px !important;
+  padding: 4px 8px !important;
+  font-size: 0.82rem !important;
+}
+
+.filter-actions {
+  margin-top: 8px !important;
+  padding-top: 6px !important;
+}
+
 

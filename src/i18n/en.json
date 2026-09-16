@@ -52,6 +52,7 @@
   "preview.showingAll": "Showing {count} rows",
   "preview.showingFiltered": "Showing {filtered} of {total} rows",
   "preview.noData": "No data to preview.",
+  "preview.colNo": "No",
   "preview.colEmployeeId": "Employee ID",
   "preview.colName": "Name",
   "preview.colGroupCode": "Group Code",
@@ -98,6 +99,18 @@
 
   "reset.button": "Reset / Start Over",
   "reset.confirm": "Reset everything and clear all uploaded files?",
+
+  "nav.role": "HR Staff",
+  "nav.theme": "Theme",
+  "nav.language": "Language",
+  "nav.help": "Help & Rules",
+  "nav.settings": "Settings",
+  "filter.hideResolved": "Hide OK / Fixed",
+  "filter.hideFuture": "Hide Future Shifts",
+  "filter.hideApplied": "Hide Applied (Leave & OT)",
+  "filter.hideNoCheckout": "Hide No Checkout",
+  "preview.fullscreen": "Full Screen",
+  "preview.exitFullscreen": "Exit Full Screen",
 
   "lang.en": "EN",
   "lang.my": "မြန်မာ",

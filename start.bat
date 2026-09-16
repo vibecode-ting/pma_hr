@@ -1,14 +1,14 @@
 @echo off
 title HR-Portal Production Server
 
-:: ??? Kill any process already using port 4173 ???????????????????????????????
+:: ── Kill any process already using port 4173 ──────────────────────────────
 echo Checking for processes on port 4173...
 for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":4173 " ^| findstr "LISTENING" 2^>nul') do (
     echo   Killing PID %%a on port 4173...
     taskkill /PID %%a /F >nul 2>&1
 )
 
-:: ??? Install npm dependencies ????????????????????????????????????????????????
+:: ── Install npm dependencies ───────────────────────────────────────────────
 echo.
 echo Installing npm packages...
 call npm install
@@ -18,32 +18,50 @@ if errorlevel 1 (
     exit /b 1
 )
 
-:: ??? Build for production ????????????????????????????????????????????????????
+:: ── Ensure config exists and sync to public ────────────────────────────────
+if exist config.json (
+    copy /Y config.json public\config.json >nul
+) else if exist config.example.json (
+    echo Creating config.json from config.example.json...
+    copy /Y config.example.json config.json >nul
+    copy /Y config.example.json public\config.json >nul
+)
+
+:: ── Build for production ───────────────────────────────────────────────────
 echo.
 echo Building for production...
 call npm run build
 if errorlevel 1 (
-    echo ERROR: Build failed. Check the errors above.
+    echo ERROR: Build failed. See errors above.
     pause
     exit /b 1
 )
+
+:: ── Ensure latest config.json is copied/replaced into dist ─────────────────
 if exist config.json (
-    copy /Y config.json dist\config.json
-) else if exist config.example.json (
-    copy /Y config.example.json dist\config.json
+    copy /Y config.json dist\config.json >nul
 )
 
+:: ── Detect LAN IP (Prioritize Ethernet, then Wi-Fi) ───────────────────────
+node scripts\get-lan-ip.cjs > getip.txt
+set /p LAN_IP=<getip.txt
+del getip.txt
+:: Trim leading space
+set LAN_IP=%LAN_IP: =%
 
-:: ??? Start preview server on LAN ?????????????????????????????????????????????
 echo.
-echo Starting production server (LAN accessible)...
-echo   Local:   http://localhost:4173/
-echo   Network: http://YOUR-IP:4173/
+echo Starting production server on LAN only...
+echo   Network: http://%LAN_IP%:4173/
 echo.
 echo   Keep this window open to keep the server running.
 echo   Close this window to stop the server.
 echo.
-call npx vite preview --host --port 4173
 
-:: ??? Pause keeps terminal open if server exits unexpectedly ??????????????????
+:: ── Open in default browser after server starts (spawned asynchronously) ──
+start "" cmd /c "ping -n 3 127.0.0.1 >nul & start http://%LAN_IP%:4173/"
+
+:: ── Start Vite preview (LAN IP bound, port 4173) ──────────────────────────
+call npx vite preview --port 4173
+
+:: ── Keep terminal open if server exits unexpectedly ───────────────────────
 pause

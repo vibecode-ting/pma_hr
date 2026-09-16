@@ -21,9 +21,12 @@ import {
   REMARK_NO_RECORD,
   REMARK_LEAVE_APPLIED,
   REMARK_NO_CHECKOUT,
+  REMARK_NO_CHECKIN,
   REMARK_OT_SUFFIX,
   REMARK_OT_APPLIED,
   isRowResolved,
+  isRemarkGreen,
+  isRemarkRed,
 } from './rules';
 import { exportSelection } from './export';
 import {
@@ -56,6 +59,7 @@ let defaultRulesConfig: RulesConfig = {
   remarkNoRecord: REMARK_NO_RECORD,
   remarkLeaveApplied: REMARK_LEAVE_APPLIED,
   remarkNoCheckout: REMARK_NO_CHECKOUT,
+  remarkNoCheckin: REMARK_NO_CHECKIN,
   remarkOtSuffix: REMARK_OT_SUFFIX,
   remarkOtApplied: REMARK_OT_APPLIED,
   shifts: JSON.parse(JSON.stringify(DEFAULT_SHIFTS)),
@@ -67,7 +71,7 @@ let selectedGroups: Set<string> = new Set();
 let exportMode: ExportMode = 'per-group';
 let parseErrors: string[] = [];
 let parseWarnings: string[] = [];
-let activeFilter: LiveFilterState = { idNo: '', name: '', groupCode: '', date: '', klass: '', remarks: '', absent: '', overtime: '', hideResolved: true };
+let activeFilter: LiveFilterState = { idNo: '', name: '', groupCode: '', date: '', klass: '', remarks: '', absent: '', overtime: '', hideResolved: true, hideFutureShifts: true, hideApplied: true };
 
 const SESSION_KEY = 'hr_portal_session';
 const THEME_STORAGE_KEY = 'hr_portal_theme';
@@ -204,51 +208,46 @@ function renderLogin(container: HTMLElement): void {
 
   rightPanel.appendChild(panelTop);
 
-  // ── Top Center Brand Header (No box, just title & text) ──
-  const topBrand = document.createElement('div');
-  topBrand.className = 'login-right-top-brand';
-
-  const brandBadge = document.createElement('div');
-  brandBadge.className = 'login-right-brand-badge';
-  brandBadge.innerHTML = `<span class="badge-dot"></span><span>ADIDAS B150 HR-PORTAL</span>`;
-  topBrand.appendChild(brandBadge);
-
-  const brandTitle = document.createElement('h1');
-  brandTitle.className = 'login-right-brand-title';
-  brandTitle.textContent = 'Pouchen | B150 HR-Portal';
-  topBrand.appendChild(brandTitle);
-
-  const brandSub = document.createElement('p');
-  brandSub.className = 'login-right-brand-sub';
-  brandSub.textContent = 'Attendance & Shift Automation System';
-  topBrand.appendChild(brandSub);
-
-  rightPanel.appendChild(topBrand);
-
   // Center Form Container with Glass & Shadows
   const formContainer = document.createElement('div');
   formContainer.className = 'login-form-container login-glass-card';
 
-  // Form Header: Centered Logo & Centered APP Title
+  // Form Header: Logo (left, circle) & Brand Title (right)
   const formHeader = document.createElement('div');
   formHeader.className = 'login-form-header';
+  formHeader.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:24px;text-align:left;';
 
   const rightLogo = document.createElement('img');
   rightLogo.src = './pouchen_logo.png';
   rightLogo.alt = 'Pouchen Logo';
   rightLogo.className = 'login-right-logo';
+  // Circle shape styling
+  rightLogo.style.cssText = 'width:64px;height:64px;object-fit:cover;border-radius:50%;flex-shrink:0;border:2px solid var(--accent-gold, #D4AF37);background:white;margin:0;padding:4px;';
   formHeader.appendChild(rightLogo);
 
-  const rightAppTitle = document.createElement('h2');
-  rightAppTitle.className = 'login-right-app-title';
-  rightAppTitle.setAttribute('data-i18n', 'app.title');
-  rightAppTitle.textContent = t('app.title');
-  formHeader.appendChild(rightAppTitle);
+  const brandWrap = document.createElement('div');
+  brandWrap.style.cssText = 'display:flex;flex-direction:column;align-items:flex-start;';
 
-  const formDesc = document.createElement('p');
-  formDesc.className = 'login-form-desc';
-  formDesc.textContent = 'Enter your credentials to access the attendance system';
-  formHeader.appendChild(formDesc);
+  const brandBadge = document.createElement('div');
+  brandBadge.className = 'login-right-brand-badge';
+  brandBadge.style.margin = '0 0 6px 0';
+  brandBadge.innerHTML = `<span class="badge-dot"></span><span>ADIDAS B150 HR-PORTAL</span>`;
+  brandWrap.appendChild(brandBadge);
+
+  const brandTitle = document.createElement('h1');
+  brandTitle.className = 'login-right-brand-title';
+  brandTitle.style.margin = '0 0 2px 0';
+  brandTitle.style.fontSize = '1.25rem'; // slightly smaller to fit better inside the box
+  brandTitle.textContent = 'Pouchen | B150 HR-Portal';
+  brandWrap.appendChild(brandTitle);
+
+  const brandSub = document.createElement('p');
+  brandSub.className = 'login-right-brand-sub';
+  brandSub.style.margin = '0';
+  brandSub.textContent = 'Attendance & Shift Automation System';
+  brandWrap.appendChild(brandSub);
+
+  formHeader.appendChild(brandWrap);
 
   formContainer.appendChild(formHeader);
 
@@ -370,6 +369,291 @@ function renderApp(container: HTMLElement): void {
   container.innerHTML = '';
   container.appendChild(createStarfield());
 
+  // ── Helper: run export (used by header download button) ──
+  async function doExport(btn: HTMLButtonElement): Promise<void> {
+    if (allRows.length === 0) { showToast('No data to export — please upload files first.', 'error'); return; }
+    btn.disabled = true;
+    btn.innerHTML = `<span class="spinner"></span><span>${t('export.generating')}</span>`;
+    try {
+      const exportRows = activeFilter.hideResolved !== false
+        ? allRows.filter((r) => !isRowResolved(r))
+        : allRows;
+      await exportSelection(exportRows, selectedGroups, exportMode, (msg) => showToast(msg, 'info'));
+      showToast(t('export.generate') + ' ✅', 'success');
+    } catch (e) { showToast(String(e), 'error'); }
+    btn.disabled = false;
+    btn.innerHTML = `${icons.download} <span data-i18n="export.generate">${t('export.generate')}</span>`;
+  }
+
+  // ── Helper: Build Live View & General Settings Panel ──
+  function buildLiveViewSettingsPanel(): HTMLElement {
+    const panel = document.createElement('div');
+    panel.style.cssText = 'display:flex;flex-direction:column;gap:var(--space-4);';
+
+    // 1. Live View & Filtering Card
+    const liveCard = document.createElement('div');
+    liveCard.className = 'settings-group-card';
+    liveCard.innerHTML = `
+      <div class="settings-group-title">
+        <span>📊</span> <span>Live View & Filter Defaults</span>
+      </div>
+    `;
+
+    // Row: Default Hide Resolved Rows
+    const rowResolved = document.createElement('div');
+    rowResolved.className = 'settings-row';
+    rowResolved.innerHTML = `
+      <div class="settings-row-info">
+        <span class="settings-row-label">Hide OK / Resolved Rows by Default</span>
+        <span class="settings-row-desc">Automatically hide rows with no errors or remarks in Live View</span>
+      </div>
+    `;
+    const toggleResolved = document.createElement('input');
+    toggleResolved.type = 'checkbox';
+    toggleResolved.checked = activeFilter.hideResolved !== false;
+    toggleResolved.style.transform = 'scale(1.25)';
+    toggleResolved.addEventListener('change', () => {
+      activeFilter.hideResolved = toggleResolved.checked;
+      localStorage.setItem('hr_pref_hide_resolved', String(toggleResolved.checked));
+      if (activeTab === 2) renderContent();
+      showToast('Live View filter preference saved', 'info');
+    });
+    rowResolved.appendChild(toggleResolved);
+    liveCard.appendChild(rowResolved);
+
+    // Row: Default Hide Future / No Punch Shifts
+    const rowFuture = document.createElement('div');
+    rowFuture.className = 'settings-row';
+    rowFuture.innerHTML = `
+      <div class="settings-row-info">
+        <span class="settings-row-label">Hide Future Scheduled Shifts</span>
+        <span class="settings-row-desc">Hide scheduled shifts where work time has not arrived and no punches exist</span>
+      </div>
+    `;
+    const toggleFuture = document.createElement('input');
+    toggleFuture.type = 'checkbox';
+    toggleFuture.checked = activeFilter.hideFutureShifts !== false;
+    toggleFuture.style.transform = 'scale(1.25)';
+    toggleFuture.addEventListener('change', () => {
+      activeFilter.hideFutureShifts = toggleFuture.checked;
+      localStorage.setItem('hr_pref_hide_future', String(toggleFuture.checked));
+      if (activeTab === 2) renderContent();
+      showToast('Live View filter preference saved', 'info');
+    });
+    rowFuture.appendChild(toggleFuture);
+    liveCard.appendChild(rowFuture);
+
+    // Row: Default Hide Applied Leave & OT
+    const rowApplied = document.createElement('div');
+    rowApplied.className = 'settings-row';
+    rowApplied.innerHTML = `
+      <div class="settings-row-info">
+        <span class="settings-row-label">Hide Leave & OT Applied Rows</span>
+        <span class="settings-row-desc">Filter out rows marked as ခြင့္တိုင္ၿပီး (Leave Applied) or အိုတီတင္ပီး (OT Applied)</span>
+      </div>
+    `;
+    const toggleApplied = document.createElement('input');
+    toggleApplied.type = 'checkbox';
+    toggleApplied.checked = activeFilter.hideApplied !== false;
+    toggleApplied.style.transform = 'scale(1.25)';
+    toggleApplied.addEventListener('change', () => {
+      activeFilter.hideApplied = toggleApplied.checked;
+      localStorage.setItem('hr_pref_hide_applied', String(toggleApplied.checked));
+      if (activeTab === 2) renderContent();
+      showToast('Live View filter preference saved', 'info');
+    });
+    rowApplied.appendChild(toggleApplied);
+    liveCard.appendChild(rowApplied);
+
+    panel.appendChild(liveCard);
+
+    // 2. Export & Report Settings Card (Non-rules)
+    const exportCard = document.createElement('div');
+    exportCard.className = 'settings-group-card';
+    exportCard.innerHTML = `
+      <div class="settings-group-title">
+        <span>💾</span> <span>Report Export Options (Non-Rule)</span>
+      </div>
+    `;
+
+    // Row: Default Export Mode
+    const rowExpMode = document.createElement('div');
+    rowExpMode.className = 'settings-row';
+    rowExpMode.innerHTML = `
+      <div class="settings-row-info">
+        <span class="settings-row-label">Default Export Generation Mode</span>
+        <span class="settings-row-desc">Choose how attendance workbooks are split when clicking Generate & Download</span>
+      </div>
+    `;
+    const selectExpMode = document.createElement('select');
+    selectExpMode.className = 'filter-select';
+    selectExpMode.style.maxWidth = '220px';
+    selectExpMode.innerHTML = `
+      <option value="per-group">Separate by Group Code</option>
+      <option value="combined">Single Combined Workbook</option>
+      <option value="per-source-file">One per Source File</option>
+    `;
+    selectExpMode.value = exportMode;
+    selectExpMode.addEventListener('change', () => {
+      exportMode = selectExpMode.value as ExportMode;
+      localStorage.setItem('hr_pref_export_mode', exportMode);
+      updateExportPreview();
+      showToast('Export mode default updated', 'info');
+    });
+    rowExpMode.appendChild(selectExpMode);
+    exportCard.appendChild(rowExpMode);
+
+    panel.appendChild(exportCard);
+
+    // 3. System & Interface Settings
+    const uiCard = document.createElement('div');
+    uiCard.className = 'settings-group-card';
+    uiCard.innerHTML = `
+      <div class="settings-group-title">
+        <span>🖥️</span> <span>Application & Interface Preferences</span>
+      </div>
+    `;
+
+    // Row: Live Clock in Header
+    const rowClock = document.createElement('div');
+    rowClock.className = 'settings-row';
+    rowClock.innerHTML = `
+      <div class="settings-row-info">
+        <span class="settings-row-label">Header Live Clock</span>
+        <span class="settings-row-desc">Show real-time digital clock and calendar in the top header</span>
+      </div>
+    `;
+    const toggleClock = document.createElement('input');
+    toggleClock.type = 'checkbox';
+    toggleClock.checked = localStorage.getItem('hr_pref_show_clock') !== 'false';
+    toggleClock.style.transform = 'scale(1.25)';
+    toggleClock.addEventListener('change', () => {
+      localStorage.setItem('hr_pref_show_clock', String(toggleClock.checked));
+      const clockEl = document.getElementById('app-live-clock');
+      if (clockEl) clockEl.style.display = toggleClock.checked ? 'inline-flex' : 'none';
+      showToast('Clock display preference updated', 'info');
+    });
+    rowClock.appendChild(toggleClock);
+    uiCard.appendChild(rowClock);
+
+    // Row: Reset UI Preferences
+    const rowReset = document.createElement('div');
+    rowReset.className = 'settings-row';
+    rowReset.innerHTML = `
+      <div class="settings-row-info">
+        <span class="settings-row-label">Reset Preferences</span>
+        <span class="settings-row-desc">Restore Live View filters and export settings to defaults</span>
+      </div>
+    `;
+    const resetBtn = document.createElement('button');
+    resetBtn.type = 'button';
+    resetBtn.className = 'btn btn-secondary btn-sm';
+    resetBtn.textContent = 'Reset Preferences';
+    resetBtn.addEventListener('click', () => {
+      localStorage.removeItem('hr_pref_hide_resolved');
+      localStorage.removeItem('hr_pref_hide_future');
+      localStorage.removeItem('hr_pref_hide_applied');
+      localStorage.removeItem('hr_pref_export_mode');
+      localStorage.removeItem('hr_pref_show_clock');
+      activeFilter.hideResolved = true;
+      activeFilter.hideFutureShifts = true;
+      activeFilter.hideApplied = true;
+      exportMode = 'per-group';
+      toggleResolved.checked = true;
+      toggleFuture.checked = true;
+      toggleApplied.checked = true;
+      toggleClock.checked = true;
+      selectExpMode.value = 'per-group';
+      const clockEl = document.getElementById('app-live-clock');
+      if (clockEl) clockEl.style.display = 'inline-flex';
+      if (activeTab === 2) renderContent();
+      showToast('All Live View & UI settings reset to defaults ✅', 'success');
+    });
+    rowReset.appendChild(resetBtn);
+    uiCard.appendChild(rowReset);
+
+    panel.appendChild(uiCard);
+    return panel;
+  }
+
+  // ── Helper: open settings modal with solid background (no transparency) ──
+  function openSettingsModal(initialTab: 'rules' | 'liveview' = 'rules'): void {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:20px;';
+
+    const modal = document.createElement('div');
+    modal.className = 'modal-card';
+    modal.style.cssText = 'background:var(--bg-panel, #12161F);color:var(--text-primary, #F5F1E6);border:1px solid var(--border-hairline, #2A2F3D);border-radius:var(--radius-xl, 16px);max-width:920px;width:100%;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.7);position:relative;';
+
+    // Header with Tabs
+    const header = document.createElement('div');
+    header.className = 'modal-header';
+    header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border-hairline);background:var(--bg-panel-raised);flex-wrap:wrap;gap:12px;';
+
+    const tabsWrap = document.createElement('div');
+    tabsWrap.style.cssText = 'display:flex;align-items:center;gap:8px;';
+
+    const btnRules = document.createElement('button');
+    btnRules.type = 'button';
+    btnRules.className = `settings-tab-btn ${initialTab === 'rules' ? 'active' : ''}`;
+    btnRules.innerHTML = `<span>⚙️</span> <span>${t('nav.rulesConfig') || 'Rules Configuration'}</span>`;
+
+    const btnLiveView = document.createElement('button');
+    btnLiveView.type = 'button';
+    btnLiveView.className = `settings-tab-btn ${initialTab === 'liveview' ? 'active' : ''}`;
+    btnLiveView.innerHTML = `<span>📊</span> <span>${t('nav.settings') || 'Live View & Preferences'}</span>`;
+
+    tabsWrap.appendChild(btnRules);
+    tabsWrap.appendChild(btnLiveView);
+    header.appendChild(tabsWrap);
+
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.className = 'modal-close-btn';
+    closeBtn.innerHTML = `${icons.x || '✕'} <span style="margin-left:4px;font-size:0.85rem;">Close</span>`;
+    closeBtn.addEventListener('click', () => overlay.remove());
+    header.appendChild(closeBtn);
+
+    modal.appendChild(header);
+
+    // Body
+    const body = document.createElement('div');
+    body.className = 'modal-body';
+    body.style.cssText = 'padding:20px;overflow-y:auto;flex:1;background:var(--bg-panel, #12161F);';
+    modal.appendChild(body);
+
+    function showTab(tab: 'rules' | 'liveview'): void {
+      body.innerHTML = '';
+      if (tab === 'rules') {
+        btnRules.classList.add('active');
+        btnLiveView.classList.remove('active');
+        body.appendChild(buildRulesConfigPanel());
+      } else {
+        btnLiveView.classList.add('active');
+        btnRules.classList.remove('active');
+        body.appendChild(buildLiveViewSettingsPanel());
+      }
+    }
+
+    btnRules.addEventListener('click', () => showTab('rules'));
+    btnLiveView.addEventListener('click', () => showTab('liveview'));
+
+    showTab(initialTab);
+
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) overlay.remove();
+    });
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+  }
+
+  // ── Helper: open rules config modal ──
+  function openRulesConfigModal(): void {
+    openSettingsModal('rules');
+  }
+
   const pageWrapper = document.createElement('div');
   pageWrapper.className = 'page-wrapper app-shell';
   container.appendChild(pageWrapper);
@@ -399,7 +683,7 @@ function renderApp(container: HTMLElement): void {
 
   header.appendChild(headerLeft);
 
-  // ── Header Right: Live Ticking System Clock ──
+  // ── Header Right: Live Clock & Impact Download Button ──
   const headerRight = document.createElement('div');
   headerRight.className = 'app-header-right';
 
@@ -420,8 +704,20 @@ function renderApp(container: HTMLElement): void {
   };
   updateClock();
   const clockInterval = setInterval(updateClock, 1000);
-
   headerRight.appendChild(clockEl);
+
+  // Glowing circle/pill impact Generate & Download button in top right header
+  const headerDownloadBtn = document.createElement('button');
+  headerDownloadBtn.type = 'button';
+  headerDownloadBtn.className = 'header-download-btn';
+  headerDownloadBtn.id = 'header-download-btn';
+  headerDownloadBtn.title = 'Generate & Download Attendance Report';
+  headerDownloadBtn.innerHTML = `${icons.download} <span data-i18n="export.generate">${t('export.generate')}</span>`;
+  headerDownloadBtn.addEventListener('click', () => {
+    doExport(headerDownloadBtn);
+  });
+  headerRight.appendChild(headerDownloadBtn);
+
   header.appendChild(headerRight);
   pageWrapper.appendChild(header);
 
@@ -459,14 +755,14 @@ function renderApp(container: HTMLElement): void {
     sidebar.classList.add('collapsed');
   }
 
-  // Profile card
+  // Profile card with i18n
   const profileCard = document.createElement('div');
   profileCard.className = 'sidebar-profile';
   profileCard.innerHTML = `
     <div class="sidebar-profile-avatar">${icons.user}</div>
     <div class="sidebar-profile-info">
       <div class="sidebar-profile-name">${session.displayName}</div>
-      <div class="sidebar-profile-role">HR Staff</div>
+      <div class="sidebar-profile-role" data-i18n="nav.role">${t('nav.role') || 'HR Staff'}</div>
     </div>
   `;
   sidebar.appendChild(profileCard);
@@ -479,22 +775,24 @@ function renderApp(container: HTMLElement): void {
 
   sidebar.appendChild(sidebarDivider());
 
-  // Theme switcher in sidebar
+  // Theme switcher in sidebar with i18n
   const themeRow = document.createElement('div');
   themeRow.className = 'sidebar-control-row';
   const themeLabel = document.createElement('span');
   themeLabel.className = 'sidebar-control-label';
-  themeLabel.textContent = 'Theme';
+  themeLabel.setAttribute('data-i18n', 'nav.theme');
+  themeLabel.textContent = t('nav.theme') || 'Theme';
   themeRow.appendChild(themeLabel);
   themeRow.appendChild(buildThemeSwitcher(getTheme, (th) => setTheme(th)));
   sidebar.appendChild(themeRow);
 
-  // Language switcher in sidebar (dropdown when expanded, click-cycle EN >> MY >> ZH when folded)
+  // Language switcher in sidebar with i18n
   const langRow = document.createElement('div');
   langRow.className = 'sidebar-control-row';
   const langLabel = document.createElement('span');
   langLabel.className = 'sidebar-control-label';
-  langLabel.textContent = 'Language';
+  langLabel.setAttribute('data-i18n', 'nav.language');
+  langLabel.textContent = t('nav.language') || 'Language';
   langRow.appendChild(langLabel);
   langRow.appendChild(buildSidebarLangSwitcher(getLocale, (l) => { setLocale(l); applyAll(); }));
   sidebar.appendChild(langRow);
@@ -504,13 +802,29 @@ function renderApp(container: HTMLElement): void {
   // Help button
   const helpBtn = document.createElement('button');
   helpBtn.className = 'sidebar-action-btn';
-  helpBtn.innerHTML = `${icons.helpCircle} <span>Help & Rules</span>`;
+  helpBtn.innerHTML = `${icons.helpCircle} <span data-i18n="nav.help">${t('nav.help') || 'Help & Rules'}</span>`;
   helpBtn.addEventListener('click', () => {
     document.body.appendChild(buildHelpModal(appConfig?.resources));
   });
   sidebar.appendChild(helpBtn);
 
+  // Rules Configuration button in sidebar (between Help and Logout)
+  const rulesConfigBtn = document.createElement('button');
+  rulesConfigBtn.className = 'sidebar-action-btn';
+  rulesConfigBtn.innerHTML = `${icons.settings || '⚙'} <span data-i18n="nav.rulesConfig">${t('nav.rulesConfig')}</span>`;
+  rulesConfigBtn.addEventListener('click', () => {
+    openRulesConfigModal();
+  });
+  sidebar.appendChild(rulesConfigBtn);
 
+  // Settings button in sidebar
+  const settingsBtn = document.createElement('button');
+  settingsBtn.className = 'sidebar-action-btn';
+  settingsBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> <span data-i18n="nav.settings">${t('nav.settings') || 'Settings'}</span>`;
+  settingsBtn.addEventListener('click', () => {
+    openSettingsModal('liveview');
+  });
+  sidebar.appendChild(settingsBtn);
 
   sidebar.appendChild(sidebarDivider());
 
@@ -532,16 +846,25 @@ function renderApp(container: HTMLElement): void {
   contentWrap.className = 'app-content-wrap';
   body.appendChild(contentWrap);
 
-  // ── Tab bar ──
-  let activeTab: 1 | 2 | 3 = 1;
+  // Auto-fold the sidebar when clicking on the right side / content area
+  contentWrap.addEventListener('click', () => {
+    if (!isSidebarCollapsed) {
+      isSidebarCollapsed = true;
+      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, 'true');
+      sidebar.classList.add('collapsed');
+      collapseBtn.title = 'Expand sidebar';
+    }
+  });
+
+  // ── Tab bar (2 tabs: 1. Upload Files, 2. Live Preview & Export) ──
+  let activeTab: 1 | 2 = 1;
 
   const tabBar = document.createElement('div');
   tabBar.className = 'app-tab-bar';
 
-  const tabs: { id: 1 | 2 | 3; labelKey: string; icon: string }[] = [
+  const tabs: { id: 1 | 2; labelKey: string; icon: string }[] = [
     { id: 1, labelKey: 'upload.heading', icon: icons.uploadCloud },
-    { id: 2, labelKey: 'nav.rulesConfig', icon: icons.settings },
-    { id: 3, labelKey: 'preview.heading', icon: icons.fileSpreadsheet },
+    { id: 2, labelKey: 'preview.heading', icon: icons.fileSpreadsheet },
   ];
 
   function renderTabs(): void {
@@ -551,7 +874,8 @@ function renderApp(container: HTMLElement): void {
       btn.className = `app-tab-btn${activeTab === tab.id ? ' active' : ''}`;
       btn.type = 'button';
       btn.innerHTML = `<span class="app-tab-icon">${tab.icon}</span><span class="app-tab-label" data-i18n="${tab.labelKey}">${t(tab.labelKey) || tab.labelKey}</span>`;
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
         activeTab = tab.id;
         renderTabs();
         renderContent();
@@ -709,9 +1033,7 @@ function renderApp(container: HTMLElement): void {
       gotoConfigBtn.className = 'btn btn-secondary btn-sm';
       gotoConfigBtn.innerHTML = `Open Configs &rarr;`;
       gotoConfigBtn.addEventListener('click', () => {
-        activeTab = 2;
-        renderTabs();
-        renderContent();
+        openSettingsModal('rules');
       });
       configBanner.appendChild(gotoConfigBtn);
       wrap.appendChild(configBanner);
@@ -1056,12 +1378,6 @@ function renderApp(container: HTMLElement): void {
       stepWrap.appendChild(buildUploadSection());
       contentPanel.appendChild(stepWrap);
     } else if (activeTab === 2) {
-      contentPanel.classList.remove('live-view-fullscreen');
-      const stepWrap = document.createElement('div');
-      stepWrap.className = 'step-process-container';
-      stepWrap.appendChild(buildConfigsSection());
-      contentPanel.appendChild(stepWrap);
-    } else if (activeTab === 3) {
       contentPanel.classList.add('live-view-fullscreen');
       contentPanel.appendChild(buildPreviewSection());
     }

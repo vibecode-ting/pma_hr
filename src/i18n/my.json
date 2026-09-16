@@ -52,6 +52,7 @@
   "preview.showingAll": "မှတ်တမ်း {count} ခုကို ပြသနေသည်",
   "preview.showingFiltered": "မှတ်တမ်း စုစုပေါင်း {total} ခုမှ {filtered} ခုကို ပြသနေသည်",
   "preview.noData": "ကြည့်ရှုရန် ဒေတာမရှိပါ။",
+  "preview.colNo": "စဉ်",
   "preview.colEmployeeId": "ဝန်ထမ်းကုဒ်",
   "preview.colName": "အမည်",
   "preview.colGroupCode": "အဖွဲ့ကုဒ်",
@@ -98,6 +99,18 @@
 
   "reset.button": "ပြန်စရန် / ဖျက်ရန်",
   "reset.confirm": "အားလုံးဖျက်ပြီး တင်ထားသောဖိုင်များကို ရှင်းလင်းမည်လား?",
+
+  "nav.role": "HR ဝန်ထမ်း",
+  "nav.theme": "အပြင်အဆင်",
+  "nav.language": "ဘာသာစကား",
+  "nav.help": "အကူအညီနှင့် စည်းမျဉ်းများ",
+  "nav.settings": "ဆက်တင်များ",
+  "filter.hideResolved": "မှန်ကန်သော အချက်အလက်များ ဖျောက်ရန်",
+  "filter.hideFuture": "မရောက်သေးသော အချိန်စာရင်း ဖျောက်ရန်",
+  "filter.hideApplied": "ခွင့်/အိုတီတင်ပြီးသားများ ဖျောက်ရန်",
+  "filter.hideNoCheckout": "အထွက်တိုင်းကဒ်မရှိပါ ဖျောက်ရန်",
+  "preview.fullscreen": "မျက်နှာပြင်အပြည့်",
+  "preview.exitFullscreen": "မူလအတိုင်း ပြန်သွားရန်",
 
   "lang.en": "EN",
   "lang.my": "မြန်မာ",

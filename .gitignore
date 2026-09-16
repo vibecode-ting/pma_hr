@@ -8,6 +8,7 @@ dist/
 # See config.example.json for the schema; copy it to config.json and fill in real credentials.
 # GitHub Pages sites are PUBLIC — do not store sensitive passwords in config.json on a public repo.
 /config.json
+/public/config.json
 
 # Editor
 .vscode/

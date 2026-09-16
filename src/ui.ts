@@ -15,12 +15,17 @@ import {
   REMARK_LATE_SUFFIX,
   GRACE_MINUTES,
   isRowResolved,
+  isRemarkGreen,
+  isRemarkRed,
+  normalizeDateDigits,
 } from './rules';
 
 // ─── Lucide SVG icon strings ──────────────────────────────────────────────────
 // Using raw SVG so we have zero extra dependency complexity at runtime.
 
 const icons: Record<string, string> = {
+  maximize: `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>`,
+  minimize: `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14h6m0 0v6m0-6L3 21m17-7h-6m0 0v6m0-6l7 7M4 10h6m0 0V4m0 6L3 3m17 7h-6m0 0V4m0 6l7-7"/></svg>`,
   uploadCloud: `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>`,
   fileSpreadsheet: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>`,
   x: `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`,
@@ -485,43 +490,44 @@ function classifyRemark(remark: string): 'late' | 'no-record' | 'no-checkout' | 
 
 /**
  * Render the Remarks cell as a colored badge (or em-dash if empty).
+ * Applied (ခြင့္တိုင္ၿပီး / အိုတီတင္ပီး) -> Green badge.
+ * Required actions (ခြင့္တိုင္ရန္ / အိုတီတင္ရန္ / မရွိပါ) -> Red badge.
  */
 function renderRemarkCell(remark: string): HTMLTableCellElement {
   const td = document.createElement('td');
+  td.className = 'col-remark-cell';
 
-  if (!remark) {
-    td.className = 'badge-muted';
+  if (!remark || !remark.trim()) {
+    td.className = 'col-remark-cell badge-muted';
     td.textContent = '—';
     td.style.color = 'var(--text-muted)';
     return td;
   }
 
-  const type = classifyRemark(remark);
   const badge = document.createElement('span');
 
-  if (type === 'late') {
-    badge.className = 'badge badge-warning';
-    badge.innerHTML = `${icons.clockAlert} ${remark}`;
-  } else if (type === 'no-record') {
-    badge.className = 'badge badge-danger';
-    badge.innerHTML = `${icons.fileX} ${t('badge.noRecord')}`;
-    badge.title = remark; // Show actual text on hover for Zawgyi verification
-  } else if (type === 'no-checkout') {
-    badge.className = 'badge badge-danger';
-    badge.innerHTML = `${icons.fileX} ${t('badge.noCheckout')}`;
-    badge.title = remark;
+  if (remark.includes('ညဆိုင္း')) {
+    badge.className = 'badge badge-night';
+    badge.innerHTML = `🌙 <span class="remark-text zawgyi-font">${remark}</span>`;
+  } else if (isRemarkGreen(remark)) {
+    badge.className = 'badge badge-green';
+    badge.innerHTML = `<span class="remark-icon">✓</span> <span class="remark-text zawgyi-font">${remark}</span>`;
+  } else if (isRemarkRed(remark)) {
+    badge.className = 'badge badge-danger badge-red';
+    badge.innerHTML = `${icons.alertTriangle || '⚠'} <span class="remark-text zawgyi-font">${remark}</span>`;
   } else {
     badge.className = 'badge badge-warning';
-    badge.textContent = remark;
+    badge.innerHTML = `${icons.clockAlert || '⏰'} <span class="remark-text zawgyi-font">${remark}</span>`;
   }
 
+  badge.title = remark;
   td.appendChild(badge);
   return td;
 }
 
 /**
  * Build the preview table for all provided rows.
- * Includes sticky header and scrollable container.
+ * Includes sticky header, Excel-like vertical grid borders, and scrollable container.
  */
 export function buildPreviewTable(rows: AttendanceRow[]): HTMLElement {
   const wrapper = document.createElement('div');
@@ -536,34 +542,53 @@ export function buildPreviewTable(rows: AttendanceRow[]): HTMLElement {
     return wrapper;
   }
 
+  const isGridEnabled = localStorage.getItem('hr_portal_table_grid') !== 'false';
   const table = document.createElement('table');
-  table.className = 'preview-table';
+  table.className = `preview-table live-preview-table${isGridEnabled ? ' grid-enabled' : ''}`;
   table.setAttribute('aria-label', t('preview.heading'));
 
   // Header
   const thead = document.createElement('thead');
   const headerRow = document.createElement('tr');
+
+  // Serial No column header "No"
+  const thNo = document.createElement('th');
+  thNo.setAttribute('data-i18n', 'preview.colNo');
+  thNo.textContent = t('preview.colNo') || 'No';
+  thNo.className = 'col-header-centered col-numeric col-serial-header';
+  thNo.style.cssText = 'width: 50px; min-width: 50px; text-align: center;';
+  headerRow.appendChild(thNo);
+
   for (const col of COLUMN_DEFS) {
     const th = document.createElement('th');
     th.setAttribute('data-i18n', col.i18nKey);
     th.textContent = t(col.i18nKey);
-    if (col.numeric) th.className = 'col-numeric';
+    th.className = 'col-header-centered';
+    if (col.numeric) th.classList.add('col-numeric');
     headerRow.appendChild(th);
   }
   thead.appendChild(headerRow);
   table.appendChild(thead);
 
-  // Body: render all rows
+  // Body: render all rows with 1-based serial index
   const tbody = document.createElement('tbody');
 
-  for (const row of rows) {
+  rows.forEach((row, idx) => {
     const tr = document.createElement('tr');
+
+    // Serial No cell: 1 to XX based on current view/filter
+    const tdNo = document.createElement('td');
+    tdNo.className = 'col-numeric col-serial-no zawgyi-font';
+    tdNo.style.cssText = 'text-align: center; font-weight: 600; color: var(--text-muted);';
+    tdNo.textContent = String(idx + 1);
+    tr.appendChild(tdNo);
+
     for (const col of COLUMN_DEFS) {
       if (col.key === 'remarks') {
         tr.appendChild(renderRemarkCell(row.remarks));
       } else if (col.key === 'overtimeHours') {
         const td = document.createElement('td');
-        td.className = 'col-numeric';
+        td.className = 'col-numeric zawgyi-font';
         const otVal = parseFloat(row.overtimeHours || '0');
         if (!isNaN(otVal) && otVal > 0) {
           const badge = document.createElement('span');
@@ -577,7 +602,7 @@ export function buildPreviewTable(rows: AttendanceRow[]): HTMLElement {
         tr.appendChild(td);
       } else if (col.key === 'absent') {
         const td = document.createElement('td');
-        td.className = 'col-numeric';
+        td.className = 'col-numeric zawgyi-font';
         const abVal = parseFloat(row.absent || '0');
         if (!isNaN(abVal) && abVal > 0) {
           const badge = document.createElement('span');
@@ -592,14 +617,14 @@ export function buildPreviewTable(rows: AttendanceRow[]): HTMLElement {
         const td = document.createElement('td');
         const value = String(row[col.key] ?? '');
         td.textContent = value;
-        // Mark raw data columns for the Zawgyi-safe plain font-family
-        if (col.raw) td.className = 'col-raw-data';
-        if (col.numeric) td.className = 'col-numeric';
+        td.className = 'zawgyi-font';
+        if (col.raw) td.classList.add('col-raw-data');
+        if (col.numeric) td.classList.add('col-numeric');
         tr.appendChild(td);
       }
     }
     tbody.appendChild(tr);
-  }
+  });
 
   table.appendChild(tbody);
   wrapper.appendChild(table);
@@ -651,27 +676,87 @@ export function buildLivePreviewSection(
   panelHeader.appendChild(panelTitle);
 
   const filterControlsWrap = document.createElement('div');
-  filterControlsWrap.style.cssText = 'display:flex;align-items:center;gap:var(--space-3);';
+  filterControlsWrap.className = 'filter-check-group';
 
-  const hideResolvedLabel = document.createElement('label');
-  hideResolvedLabel.className = 'filter-hide-resolved-label';
-  const hideResolvedCheckbox = document.createElement('input');
-  hideResolvedCheckbox.type = 'checkbox';
-  hideResolvedCheckbox.id = 'filter-hide-resolved';
-  hideResolvedCheckbox.checked = activeFilter.hideResolved !== false;
-  const hideResolvedText = document.createElement('span');
-  hideResolvedText.textContent = 'Hide OK / Fixed rows';
-  hideResolvedLabel.appendChild(hideResolvedCheckbox);
-  hideResolvedLabel.appendChild(hideResolvedText);
+  // Optimized Checkmark Items with 3-language translation
+  const createCheckItem = (id: string, i18nKey: string, checked: boolean) => {
+    const label = document.createElement('label');
+    label.className = 'filter-check-item';
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.id = id;
+    input.checked = checked;
+    const text = document.createElement('span');
+    text.setAttribute('data-i18n', i18nKey);
+    text.textContent = t(i18nKey);
+    label.appendChild(input);
+    label.appendChild(text);
+    return { label, input };
+  };
+
+  const { label: hideResolvedLabel, input: hideResolvedCheckbox } = createCheckItem(
+    'filter-hide-resolved',
+    'filter.hideResolved',
+    activeFilter.hideResolved !== false
+  );
   filterControlsWrap.appendChild(hideResolvedLabel);
+
+  const { label: hideFutureShiftsLabel, input: hideFutureShiftsCheckbox } = createCheckItem(
+    'filter-hide-future',
+    'filter.hideFuture',
+    activeFilter.hideFutureShifts !== false
+  );
+  filterControlsWrap.appendChild(hideFutureShiftsLabel);
+
+  const { label: hideAppliedLabel, input: hideAppliedCheckbox } = createCheckItem(
+    'filter-hide-applied',
+    'filter.hideApplied',
+    activeFilter.hideApplied !== false
+  );
+  filterControlsWrap.appendChild(hideAppliedLabel);
+
+  const { label: hideNoCheckoutLabel, input: hideNoCheckoutCheckbox } = createCheckItem(
+    'filter-hide-no-checkout',
+    'filter.hideNoCheckout',
+    activeFilter.hideNoCheckout === true
+  );
+  filterControlsWrap.appendChild(hideNoCheckoutLabel);
 
   const filterBadge = document.createElement('div');
   filterBadge.className = 'filter-panel-badge';
   filterControlsWrap.appendChild(filterBadge);
+
+  const fullscreenBtn = document.createElement('button');
+  fullscreenBtn.type = 'button';
+  fullscreenBtn.className = 'btn btn-secondary btn-sm filter-fullscreen-btn';
+  fullscreenBtn.title = 'Full Screen (F11 / ESC to exit)';
+  fullscreenBtn.innerHTML = `${icons.maximize} <span class="fullscreen-btn-text" data-i18n="preview.fullscreen">${t('preview.fullscreen') || 'Full Screen'}</span>`;
+  fullscreenBtn.addEventListener('click', () => {
+    const isFull = document.body.classList.toggle('portal-fullscreen-mode');
+    if (isFull) {
+      fullscreenBtn.innerHTML = `${icons.minimize} <span class="fullscreen-btn-text" data-i18n="preview.exitFullscreen">${t('preview.exitFullscreen') || 'Exit Full Screen'}</span>`;
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+    } else {
+      fullscreenBtn.innerHTML = `${icons.maximize} <span class="fullscreen-btn-text" data-i18n="preview.fullscreen">${t('preview.fullscreen') || 'Full Screen'}</span>`;
+      if (document.fullscreenElement && document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+  });
+  document.addEventListener('fullscreenchange', () => {
+    if (!document.fullscreenElement) {
+      document.body.classList.remove('portal-fullscreen-mode');
+      fullscreenBtn.innerHTML = `${icons.maximize} <span class="fullscreen-btn-text" data-i18n="preview.fullscreen">${t('preview.fullscreen') || 'Full Screen'}</span>`;
+    }
+  });
+  filterControlsWrap.appendChild(fullscreenBtn);
+
   panelHeader.appendChild(filterControlsWrap);
   panel.appendChild(panelHeader);
 
-  // 8-column compact filter grid
+  // 5-column clean filter grid (Name, Absent, Overtime removed per user request)
   const grid = document.createElement('div');
   grid.className = 'filter-grid';
 
@@ -703,35 +788,7 @@ export function buildLivePreviewSection(
   idGroup.appendChild(idDatalist);
   grid.appendChild(idGroup);
 
-  // 2. Name Filter
-  const nameGroup = document.createElement('div');
-  nameGroup.className = 'filter-field';
-  const nameLabel = document.createElement('label');
-  nameLabel.className = 'filter-label';
-  nameLabel.setAttribute('for', 'filter-name-input');
-  nameLabel.textContent = 'Name';
-  nameGroup.appendChild(nameLabel);
-
-  const nameInput = document.createElement('input');
-  nameInput.type = 'text';
-  nameInput.id = 'filter-name-input';
-  nameInput.className = 'filter-input';
-  nameInput.placeholder = 'Name...';
-  nameInput.setAttribute('list', 'filter-name-datalist');
-  nameInput.value = activeFilter.name || '';
-  nameGroup.appendChild(nameInput);
-
-  const nameDatalist = document.createElement('datalist');
-  nameDatalist.id = 'filter-name-datalist';
-  for (const n of uniqueNames) {
-    const opt = document.createElement('option');
-    opt.value = n;
-    nameDatalist.appendChild(opt);
-  }
-  nameGroup.appendChild(nameDatalist);
-  grid.appendChild(nameGroup);
-
-  // 3. Group Code Filter
+  // 2. Group Code Filter
   const groupField = document.createElement('div');
   groupField.className = 'filter-field';
   const groupLabel = document.createElement('label');
@@ -759,7 +816,7 @@ export function buildLivePreviewSection(
   groupField.appendChild(groupDatalist);
   grid.appendChild(groupField);
 
-  // 4. Date Filter
+  // 3. Date Filter
   const dateField = document.createElement('div');
   dateField.className = 'filter-field';
   const dateLabel = document.createElement('label');
@@ -787,7 +844,7 @@ export function buildLivePreviewSection(
   dateField.appendChild(dateDatalist);
   grid.appendChild(dateField);
 
-  // 5. Class / Shift Filter
+  // 4. Class / Shift Filter
   const classField = document.createElement('div');
   classField.className = 'filter-field';
   const classLabel = document.createElement('label');
@@ -815,49 +872,7 @@ export function buildLivePreviewSection(
   classField.appendChild(classDatalist);
   grid.appendChild(classField);
 
-  // 6. Absent Filter
-  const absField = document.createElement('div');
-  absField.className = 'filter-field';
-  const absLabel = document.createElement('label');
-  absLabel.className = 'filter-label';
-  absLabel.setAttribute('for', 'filter-absent-select');
-  absLabel.textContent = 'Absent';
-  absField.appendChild(absLabel);
-
-  const absSelect = document.createElement('select');
-  absSelect.id = 'filter-absent-select';
-  absSelect.className = 'filter-select';
-  absSelect.innerHTML = `
-    <option value="">— All —</option>
-    <option value="__HAS_ABSENT__">Absent > 0</option>
-    <option value="__NO_ABSENT__">No Absent (0)</option>
-  `;
-  if (activeFilter.absent) absSelect.value = activeFilter.absent;
-  absField.appendChild(absSelect);
-  grid.appendChild(absField);
-
-  // 7. Overtime Filter
-  const otField = document.createElement('div');
-  otField.className = 'filter-field';
-  const otLabel = document.createElement('label');
-  otLabel.className = 'filter-label';
-  otLabel.setAttribute('for', 'filter-ot-select');
-  otLabel.textContent = 'Overtime';
-  otField.appendChild(otLabel);
-
-  const otSelect = document.createElement('select');
-  otSelect.id = 'filter-ot-select';
-  otSelect.className = 'filter-select';
-  otSelect.innerHTML = `
-    <option value="">— All —</option>
-    <option value="__HAS_OT__">Overtime > 0</option>
-    <option value="__NO_OT__">No Overtime</option>
-  `;
-  if (activeFilter.overtime) otSelect.value = activeFilter.overtime;
-  otField.appendChild(otSelect);
-  grid.appendChild(otField);
-
-  // 8. Remarks Filter
+  // 5. Remarks Filter (Includes ညဆိုင္း)
   const remField = document.createElement('div');
   remField.className = 'filter-field';
   const remLabel = document.createElement('label');
@@ -871,13 +886,16 @@ export function buildLivePreviewSection(
   remSelect.className = 'filter-select';
 
   const remChoices: Array<{ value: string; label: string }> = [
-    { value: '', label: `— All —` },
+    { value: '', label: `— All Remarks —` },
     { value: '__HAS_REMARK__', label: t('filter.withRemarks') || 'With Remarks' },
     { value: '__NO_REMARK__', label: t('filter.noRemarks') || 'No Remarks' },
-    { value: 'ခွင့်တိုင်ရန်', label: 'ခွင့်တိုင်ရန် (Leave Needed)' },
-    { value: 'ခွင့်တိုင်ပြီး', label: 'ခွင့်တိုင်ပြီး (Leave Applied)' },
-    { value: 'အိုတီတင်ရန်', label: 'အိုတီတင်ရန် (OT Needed)' },
-    { value: 'အိုတီတင်ပြီး', label: 'အိုတီတင်ပြီး (OT Applied)' },
+    { value: 'ညဆိုင္း', label: 'ညဆိုင္း (Night Shift)' },
+    { value: 'ခြင့္တိုင္ရန္', label: 'ခြင့္တိုင္ရန္ (Leave Needed)' },
+    { value: 'ခြင့္တိုင္ၿပီး', label: 'ခြင့္တိုင္ၿပီး (Leave Applied)' },
+    { value: 'အိုတီတင္ရန္', label: 'အိုတီတင္ရန္ (OT Needed)' },
+    { value: 'အိုတီတင္ပီး', label: 'အိုတီတင္ပီး (OT Applied)' },
+    { value: 'အထြက္တိုင္းကဒ် မရွိပါ', label: 'အထြက္တိုင္းကဒ် မရွိပါ (No Checkout)' },
+    { value: 'အဝင္တိုင္းကဒ် မရွိပါ', label: 'အဝင္တိုင္းကဒ် မရွိပါ (No Checkin)' },
   ];
 
   for (const c of remChoices) {
@@ -891,57 +909,13 @@ export function buildLivePreviewSection(
   grid.appendChild(remField);
 
   panel.appendChild(grid);
-
-  // Reset filters & Download buttons
-  const actions = document.createElement('div');
-  actions.className = 'filter-actions';
-
-  const clearBtn = document.createElement('button');
-  clearBtn.className = 'btn btn-secondary btn-sm';
-  clearBtn.type = 'button';
-  clearBtn.innerHTML = `${icons.rotateCcw} <span data-i18n="filter.clear">${t('filter.clear')}</span>`;
-  clearBtn.addEventListener('click', () => {
-    idInput.value = '';
-    nameInput.value = '';
-    groupInput.value = '';
-    dateInput.value = '';
-    classInput.value = '';
-    absSelect.value = '';
-    otSelect.value = '';
-    remSelect.value = '';
-    hideResolvedCheckbox.checked = true;
-    applyFilters();
-  });
-  actions.appendChild(clearBtn);
-
-  if (callbacks?.onResetAll) {
-    const hardResetBtn = document.createElement('button');
-    hardResetBtn.type = 'button';
-    hardResetBtn.className = 'btn btn-danger btn-sm';
-    hardResetBtn.innerHTML = `${icons.fileX} <span data-i18n="reset.button">${t('reset.button')}</span>`;
-    hardResetBtn.addEventListener('click', () => {
-      if (confirm(t('reset.confirm'))) callbacks.onResetAll!();
-    });
-    actions.appendChild(hardResetBtn);
-  }
-
-  const spacer = document.createElement('div');
-  spacer.style.flex = '1';
-  actions.appendChild(spacer);
-
-  if (callbacks?.onDownload) {
-    const dlBtn = document.createElement('button');
-    dlBtn.id = 'export-btn';
-    dlBtn.type = 'button';
-    dlBtn.className = 'btn btn-primary';
-    dlBtn.style.cssText = 'font-weight:bold;font-size:0.92rem;padding:8px 20px;';
-    dlBtn.innerHTML = `${icons.download} <span data-i18n="export.generate">${t('export.generate')}</span>`;
-    dlBtn.addEventListener('click', () => callbacks.onDownload!(dlBtn));
-    actions.appendChild(dlBtn);
-  }
-
-  panel.appendChild(actions);
+  // (Filter panel actions: reset & generate/download buttons removed per user request)
   container.appendChild(panel);
+
+  // Summary bar above the table showing total and filtered counts
+  const summaryBar = document.createElement('div');
+  summaryBar.className = 'live-table-summary-bar';
+  container.appendChild(summaryBar);
 
   // Table wrapper container
   const tableHolder = document.createElement('div');
@@ -951,30 +925,72 @@ export function buildLivePreviewSection(
   // ── Filter evaluation ──
   const applyFilters = () => {
     const isHideResolved = hideResolvedCheckbox.checked;
+    const isHideApplied = hideAppliedCheckbox.checked;
+    const isHideNoCheckout = hideNoCheckoutCheckbox.checked;
     const current: LiveFilterState = {
       idNo: idInput.value.trim(),
-      name: nameInput.value.trim(),
+      name: '',
       groupCode: groupInput.value.trim(),
       date: dateInput.value.trim(),
       klass: classInput.value.trim(),
-      absent: absSelect.value.trim(),
-      overtime: otSelect.value.trim(),
+      absent: '',
+      overtime: '',
       remarks: remSelect.value.trim(),
       hideResolved: isHideResolved,
+      hideFutureShifts: hideFutureShiftsCheckbox.checked,
+      hideApplied: isHideApplied,
+      hideNoCheckout: isHideNoCheckout,
     };
 
     const hasActiveFilter = Boolean(
-      current.idNo || current.name || current.groupCode || current.date || current.klass || current.absent || current.overtime || current.remarks || !isHideResolved
+      current.idNo ||
+      current.groupCode ||
+      current.date ||
+      current.klass ||
+      current.remarks ||
+      !isHideResolved ||
+      !current.hideFutureShifts ||
+      !current.hideApplied ||
+      current.hideNoCheckout
     );
 
     const filtered = rows.filter((r) => {
-      if (isHideResolved && isRowResolved(r)) {
+      if (current.hideApplied && isRemarkGreen(r.remarks)) {
         return false;
+      }
+      if (current.hideNoCheckout) {
+        if (
+          r.remarks.includes('အထြက္တိုင္းကဒ် မရွိပါ') ||
+          r.remarks.includes('အထွက်တိုင်းကဒ်မရှိပါ') ||
+          r.remarks.includes('အထွက်တိုင်းကတ် မရှိပါ') ||
+          r.remarks.includes(REMARK_NO_CHECKOUT)
+        ) {
+          return false;
+        }
+      }
+      const rowDate = normalizeDateDigits(r.attendanceDate);
+      const todayStr = (() => {
+        const d = new Date();
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        return `${yyyy}${mm}${dd}`;
+      })();
+      const actPunches = r.actualTimeCard.split(',').map((s) => s.trim()).filter((s) => s.length >= 4 && !isNaN(parseInt(s, 10)));
+      const isFutureOrNight = rowDate >= todayStr && actPunches.length === 0 && (r.remarks === '' || r.remarks.includes('ညဆိုင္း') || r.remarks.includes('ညဆိုင်း'));
+
+      if (current.hideFutureShifts && isFutureOrNight) {
+        return false;
+      }
+
+      if (isHideResolved && isRowResolved(r)) {
+        if (isFutureOrNight && !current.hideFutureShifts) {
+          // Keep visible if user unchecked hideFutureShifts
+        } else {
+          return false;
+        }
       }
       if (current.idNo && !r.employeeId.toLowerCase().includes(current.idNo.toLowerCase())) {
-        return false;
-      }
-      if (current.name && !r.name.toLowerCase().includes(current.name.toLowerCase())) {
         return false;
       }
       if (current.groupCode && !r.groupCode.toLowerCase().includes(current.groupCode.toLowerCase())) {
@@ -985,17 +1001,6 @@ export function buildLivePreviewSection(
       }
       if (current.klass && !r.klass.toLowerCase().includes(current.klass.toLowerCase())) {
         return false;
-      }
-      if (current.absent) {
-        const ab = parseFloat(r.absent) || 0;
-        if (current.absent === '__HAS_ABSENT__' && ab <= 0) return false;
-        if (current.absent === '__NO_ABSENT__' && ab > 0) return false;
-      }
-      if (current.overtime) {
-        const ot = parseFloat(r.overtimeHours) || 0;
-        const hasOtRemark = r.remarks.includes('အိုတီ');
-        if (current.overtime === '__HAS_OT__' && ot <= 0 && !hasOtRemark) return false;
-        if (current.overtime === '__NO_OT__' && (ot > 0 || hasOtRemark)) return false;
       }
       if (current.remarks) {
         if (current.remarks === '__HAS_REMARK__') {
@@ -1009,9 +1014,30 @@ export function buildLivePreviewSection(
       return true;
     });
 
-    // Update row count badge
+    const hiddenCount = rows.length - filtered.length;
+
+    // Update dynamic summary bar
+    summaryBar.innerHTML = `
+      <div class="summary-stat-box">
+        <span class="stat-badge stat-total">
+          <span class="stat-label">Total Rows</span>: <strong>${rows.length}</strong>
+        </span>
+        <span class="stat-badge stat-filtered">
+          <span class="stat-label">Showing</span>: <strong>${filtered.length}</strong>
+        </span>
+        ${hiddenCount > 0 ? `
+        <span class="stat-badge stat-hidden">
+          <span>${hiddenCount} hidden by filters</span>
+        </span>` : ''}
+      </div>
+      <div class="summary-hint-text">
+        ${filtered.length === rows.length ? t('preview.showingAll', { count: rows.length }) : t('preview.showingFiltered', { filtered: filtered.length, total: rows.length })}
+      </div>
+    `;
+
+    // Update row count badge in filter panel header
     if (!hasActiveFilter && isHideResolved) {
-      filterBadge.textContent = `${filtered.length} pending error rows (${rows.length - filtered.length} OK hidden)`;
+      filterBadge.textContent = `${filtered.length} pending error rows (${hiddenCount} OK hidden)`;
     } else if (!hasActiveFilter) {
       filterBadge.textContent = t('preview.showingAll', { count: rows.length });
     } else {
@@ -1029,19 +1055,18 @@ export function buildLivePreviewSection(
   };
 
   hideResolvedCheckbox.addEventListener('change', applyFilters);
+  hideFutureShiftsCheckbox.addEventListener('change', applyFilters);
+  hideAppliedCheckbox.addEventListener('change', applyFilters);
+  hideNoCheckoutCheckbox.addEventListener('change', applyFilters);
 
   idInput.addEventListener('input', applyFilters);
   idInput.addEventListener('change', applyFilters);
-  nameInput.addEventListener('input', applyFilters);
-  nameInput.addEventListener('change', applyFilters);
   groupInput.addEventListener('input', applyFilters);
   groupInput.addEventListener('change', applyFilters);
   dateInput.addEventListener('input', applyFilters);
   dateInput.addEventListener('change', applyFilters);
   classInput.addEventListener('input', applyFilters);
   classInput.addEventListener('change', applyFilters);
-  absSelect.addEventListener('change', applyFilters);
-  otSelect.addEventListener('change', applyFilters);
   remSelect.addEventListener('change', applyFilters);
 
   // Initial display

@@ -87,6 +87,27 @@ export function buildWorkbook(rows: AttendanceRow[]): XLSX.WorkBook {
   // Column widths
   ws['!cols'] = OUTPUT_HEADERS.map((h) => ({ wch: COLUMN_WIDTHS[h] ?? 16 }));
 
+  // Force Zawgyi-One font across all worksheet cells
+  const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+  for (let R = range.s.r; R <= range.e.r; ++R) {
+    for (let C = range.s.c; C <= range.e.c; ++C) {
+      const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+      if (!ws[cellAddress]) continue;
+      const isHeader = R === 0;
+      ws[cellAddress].s = {
+        font: {
+          name: 'Zawgyi-One',
+          sz: isHeader ? 11 : 10,
+          bold: isHeader,
+        },
+        alignment: {
+          vertical: 'center',
+          horizontal: isHeader ? 'center' : (C === 6 || C === 7 ? 'right' : 'left'),
+        },
+      };
+    }
+  }
+
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Attendance');
   return wb;
@@ -96,7 +117,7 @@ export function buildWorkbook(rows: AttendanceRow[]): XLSX.WorkBook {
  * Trigger a browser download of a WorkBook as an .xlsx file.
  */
 export function downloadWorkbook(wb: XLSX.WorkBook, filename: string): void {
-  const wbArrayBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  const wbArrayBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array', cellStyles: true });
   const blob = new Blob([wbArrayBuffer], {
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   });
@@ -183,7 +204,7 @@ export async function exportSelection(
   log(`Building ZIP with ${workbooks.length} files…`);
   const zip = new JSZip();
   for (const { wb, filename } of workbooks) {
-    const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array', cellStyles: true });
     zip.file(filename, buf);
   }
   const zipBlob = await zip.generateAsync({ type: 'blob' });

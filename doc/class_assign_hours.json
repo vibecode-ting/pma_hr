@@ -1,0 +1,449 @@
+[
+  {
+    "no": 1,
+    "shift_no": "5",
+    "class": "Kitchen, D2 Morning",
+    "assigned_hours": {
+      "start_time": "05:00",
+      "end_time": "13:00"
+    },
+    "lunch_time": "09:00~10:00",
+    "overtime": [
+      {
+        "work": "13:00~15:00"
+      },
+      {
+        "rest": "15:00~15:30"
+      },
+      {
+        "work": "15:30~16:30"
+      }
+    ]
+  },
+  {
+    "no": 2,
+    "shift_no": "B",
+    "class": "Security, Driver, Fire Morning",
+    "assigned_hours": {
+      "start_time": "06:30",
+      "end_time": "14:30"
+    },
+    "lunch_time": "11:00~12:00",
+    "overtime": [
+      {
+        "work": "14:30~17:00"
+      },
+      {
+        "rest": "17:00~17:30"
+      },
+      {
+        "work": "17:30~18:00"
+      }
+    ]
+  },
+  {
+    "no": 6,
+    "shift_no": "9",
+    "class": "Engineering Morning",
+    "assigned_hours": {
+      "start_time": "07:30",
+      "end_time": "15:30"
+    },
+    "lunch_time": "12:00~13:00",
+    "overtime": [
+      {
+        "work": "12:00~12:30"
+      },
+      {
+        "rest": "12:30~13:00"
+      },
+      {
+        "work": "13:00~14:30"
+      },
+      {
+        "work": "15:30~18:00"
+      },
+      {
+        "rest": "18:00~18:30"
+      },
+      {
+        "work": "18:30~19:00"
+      }
+    ]
+  },
+  {
+    "no": 16,
+    "shift_no": "C",
+    "class": "Security, Driver, Fire Noon",
+    "assigned_hours": {
+      "start_time": "14:30",
+      "end_time": "22:30"
+    },
+    "lunch_time": "18:30~19:30",
+    "overtime": [
+      {
+        "work": "13:30~15:30"
+      },
+      {
+        "work": "22:30~00:30"
+      },
+      {
+        "rest": "00:30~01:00"
+      },
+      {
+        "work": "01:00~02:00"
+      }
+    ]
+  },
+  {
+    "no": 18,
+    "shift_no": "9",
+    "class": "Engineering Noon",
+    "assigned_hours": {
+      "start_time": "15:30",
+      "end_time": "23:30"
+    },
+    "lunch_time": "17:30~18:30",
+    "overtime": [
+      {
+        "rest": "23:30~00:00"
+      },
+      {
+        "work": "00:00~03:00"
+      }
+    ]
+  },
+  {
+    "no": 19,
+    "shift_no": "G",
+    "class": "D2 Night (Sat)",
+    "assigned_hours": {
+      "start_time": "17:00",
+      "end_time": "21:00"
+    },
+    "lunch_time": null,
+    "overtime": [
+      {
+        "work": "15:30~17:00"
+      },
+      {
+        "rest": "21:00~22:00"
+      },
+      {
+        "work": "22:00~03:00"
+      }
+    ]
+  },
+  {
+    "no": 20,
+    "shift_no": "G",
+    "class": "D2 Night",
+    "assigned_hours": {
+      "start_time": "17:00",
+      "end_time": "02:00"
+    },
+    "lunch_time": "21:00~22:00",
+    "overtime": [
+      {
+        "work": "14:30~15:00"
+      },
+      {
+        "rest": "15:00~15:30"
+      },
+      {
+        "work": "21:00~22:30"
+      },
+      {
+        "work": "02:00~03:00"
+      },
+      {
+        "rest": "03:00~03:30"
+      },
+      {
+        "work": "03:30~05:30"
+      }
+    ]
+  },
+  {
+    "no": 21,
+    "shift_no": "A",
+    "class": "Security, Driver, Fire Night",
+    "assigned_hours": {
+      "start_time": "22:30",
+      "end_time": "06:30"
+    },
+    "lunch_time": "02:00~03:00",
+    "overtime": [
+      {
+        "work": "20:00~20:30"
+      },
+      {
+        "rest": "20:30~21:00"
+      },
+      {
+        "work": "21:30~23:30"
+      },
+      {
+        "work": "06:30~08:00"
+      },
+      {
+        "rest": "08:00~08:30"
+      },
+      {
+        "work": "08:30~10:00"
+      }
+    ]
+  },
+  {
+    "no": 23,
+    "shift_no": "D",
+    "class": "Engineering Night",
+    "assigned_hours": {
+      "start_time": "23:30",
+      "end_time": "07:30"
+    },
+    "lunch_time": "02:00~03:00",
+    "overtime": [
+      {
+        "work": "07:30~08:00"
+      },
+      {
+        "rest": "08:00~08:30"
+      },
+      {
+        "work": "08:30~11:00"
+      }
+    ]
+  },
+  {
+    "no": 32,
+    "shift_no": "p",
+    "class": "Kitchen Noon, D2 Noon",
+    "assigned_hours": {
+      "start_time": "11:30",
+      "end_time": "19:30"
+    },
+    "lunch_time": "15:00~16:00",
+    "overtime": [
+      {
+        "work": "09:00~09:30"
+      },
+      {
+        "rest": "09:30~10:00"
+      },
+      {
+        "work": "10:00~11:30"
+      },
+      {
+        "work": "19:30~21:00"
+      },
+      {
+        "rest": "21:00~21:30"
+      },
+      {
+        "work": "21:30~23:00"
+      }
+    ]
+  },
+  {
+    "no": 33,
+    "shift_no": "11",
+    "class": "AC (Morning)",
+    "assigned_hours": {
+      "start_time": "07:00",
+      "end_time": "16:00"
+    },
+    "lunch_time": "12:00~13:00",
+    "overtime": [
+      {
+        "work": "04:30~06:30"
+      },
+      {
+        "rest": "06:30~07:00"
+      },
+      {
+        "work": "16:00~18:00"
+      },
+      {
+        "rest": "18:00~18:30"
+      },
+      {
+        "work": "18:30~19:30"
+      }
+    ]
+  },
+  {
+    "no": 34,
+    "shift_no": "12",
+    "class": "AC (Night)",
+    "assigned_hours": {
+      "start_time": "19:00",
+      "end_time": "04:00"
+    },
+    "lunch_time": "00:00~01:00",
+    "overtime": [
+      {
+        "work": "04:00~06:00"
+      },
+      {
+        "rest": "06:00~06:30"
+      },
+      {
+        "work": "06:30~07:30"
+      }
+    ]
+  },
+  {
+    "no": 35,
+    "shift_no": "13",
+    "class": "AC(Morning)(Sat)",
+    "assigned_hours": {
+      "start_time": "07:00",
+      "end_time": "11:00"
+    },
+    "lunch_time": null,
+    "overtime": [
+      {
+        "work": "04:30~06:30"
+      },
+      {
+        "rest": "06:30~07:00"
+      },
+      {
+        "work": "11:00~12:00"
+      },
+      {
+        "rest": "12:00~13:00"
+      },
+      {
+        "work": "13:00~17:00"
+      }
+    ]
+  },
+  {
+    "no": 36,
+    "shift_no": "14",
+    "class": "AC(Night)(Sat)",
+    "assigned_hours": {
+      "start_time": "19:00",
+      "end_time": "23:00"
+    },
+    "lunch_time": null,
+    "overtime": [
+      {
+        "work": "23:00~00:00"
+      },
+      {
+        "rest": "00:00~01:00"
+      },
+      {
+        "work": "01:00~05:00"
+      }
+    ]
+  },
+  {
+    "no": 39,
+    "shift_no": "a",
+    "class": "Clinic Noon",
+    "assigned_hours": {
+      "start_time": "10:00",
+      "end_time": "19:00"
+    },
+    "lunch_time": "14:00~15:00",
+    "overtime": [
+      {
+        "work": "19:00~20:00"
+      },
+      {
+        "rest": "20:00~21:00"
+      },
+      {
+        "work": "21:00~23:00"
+      }
+    ]
+  },
+  {
+    "no": 41,
+    "shift_no": "15",
+    "class": "Factory(Morning)",
+    "assigned_hours": {
+      "start_time": "07:00",
+      "end_time": "16:00"
+    },
+    "lunch_time": "12:00~13:00",
+    "overtime": [
+      {
+        "work": "16:00~18:00"
+      },
+      {
+        "rest": "18:00~18:30"
+      },
+      {
+        "work": "18:30~19:30"
+      }
+    ]
+  },
+  {
+    "no": 42,
+    "shift_no": "17",
+    "class": "Factory(Morning)(Sat)",
+    "assigned_hours": {
+      "start_time": "07:00",
+      "end_time": "11:00"
+    },
+    "lunch_time": null,
+    "overtime": [
+      {
+        "work": "11:00~12:00"
+      },
+      {
+        "rest": "12:00~13:00"
+      },
+      {
+        "work": "13:00~17:00"
+      }
+    ]
+  },
+  {
+    "no": 43,
+    "shift_no": "16",
+    "class": "Factory(Night)",
+    "assigned_hours": {
+      "start_time": "19:00",
+      "end_time": "04:00"
+    },
+    "lunch_time": "00:00~01:00",
+    "overtime": [
+      {
+        "work": "04:00~06:00"
+      },
+      {
+        "rest": "06:00~06:30"
+      },
+      {
+        "work": "06:30~07:30"
+      }
+    ]
+  },
+  {
+    "no": 44,
+    "shift_no": "40",
+    "class": "Factory(Night)(Sat)",
+    "assigned_hours": {
+      "start_time": "19:00",
+      "end_time": "23:00"
+    },
+    "lunch_time": null,
+    "overtime": [
+      {
+        "work": "23:00~00:00"
+      },
+      {
+        "rest": "00:00~01:00"
+      },
+      {
+        "work": "01:00~05:00"
+      }
+    ]
+  }
+]

@@ -52,6 +52,7 @@
   "preview.showingAll": "顯示所有 {count} 筆資料",
   "preview.showingFiltered": "顯示 {filtered} / {total} 筆資料",
   "preview.noData": "沒有可預覽的資料。",
+  "preview.colNo": "項次",
   "preview.colEmployeeId": "員工編號",
   "preview.colName": "姓名",
   "preview.colGroupCode": "部門代碼",
@@ -98,6 +99,18 @@
 
   "reset.button": "重置 / 重新開始",
   "reset.confirm": "確定要重置並清除所有已上傳的檔案嗎？",
+
+  "nav.role": "人資專員",
+  "nav.theme": "外觀主題",
+  "nav.language": "介面語言",
+  "nav.help": "說明與規範",
+  "nav.settings": "系統設定",
+  "filter.hideResolved": "隱藏正常 / 已修正",
+  "filter.hideFuture": "隱藏未來 / 未打卡班別",
+  "filter.hideApplied": "隱藏已申請 (請假 / 加班)",
+  "filter.hideNoCheckout": "隱藏未打下班卡",
+  "preview.fullscreen": "全螢幕檢視",
+  "preview.exitFullscreen": "結束全螢幕",
 
   "lang.en": "EN",
   "lang.my": "မြန်မာ",
