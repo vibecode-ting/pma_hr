@@ -559,6 +559,35 @@ function renderApp(container: HTMLElement): void {
       </div>
     `;
 
+    // Row: Myanmar Font Mode (Zawgyi vs Unicode)
+    const rowFont = document.createElement('div');
+    rowFont.className = 'settings-row';
+    rowFont.innerHTML = `
+      <div class="settings-row-info">
+        <span class="settings-row-label">Myanmar Font Encoding</span>
+        <span class="settings-row-desc">Switch Myanmar font between Zawgyi-One and Unicode for table display and exported Excel files</span>
+      </div>
+    `;
+    const fontSelect = document.createElement('select');
+    fontSelect.className = 'form-select';
+    fontSelect.style.cssText = 'width: 140px; font-weight: 600; padding: 4px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary); cursor: pointer;';
+    fontSelect.innerHTML = `
+      <option value="zawgyi"${fontMode === 'zawgyi' ? ' selected' : ''}>🔤 Zawgyi</option>
+      <option value="unicode"${fontMode === 'unicode' ? ' selected' : ''}>🇲🇲 Unicode</option>
+    `;
+    fontSelect.addEventListener('change', () => {
+      fontMode = fontSelect.value as FontMode;
+      localStorage.setItem('hr_portal_font_mode', fontMode);
+      if (allRows.length > 0) {
+        applyRemarks(allRows, undefined, rulesConfig, undefined, undefined, fontMode);
+        updateExportPreview();
+        if (activeTab === 2) renderContent();
+      }
+      showToast(`Font switched to ${fontMode === 'zawgyi' ? 'Zawgyi' : 'Unicode'} ✅`, 'info');
+    });
+    rowFont.appendChild(fontSelect);
+    uiCard.appendChild(rowFont);
+
     // Row: Live Clock in Header
     const rowClock = document.createElement('div');
     rowClock.className = 'settings-row';
@@ -600,6 +629,9 @@ function renderApp(container: HTMLElement): void {
       localStorage.removeItem('hr_pref_hide_applied');
       localStorage.removeItem('hr_pref_export_mode');
       localStorage.removeItem('hr_pref_show_clock');
+      localStorage.removeItem('hr_portal_font_mode');
+      fontMode = 'zawgyi';
+      fontSelect.value = 'zawgyi';
       activeFilter.hideResolved = true;
       activeFilter.hideFutureShifts = true;
       activeFilter.hideApplied = true;
@@ -861,15 +893,6 @@ function renderApp(container: HTMLElement): void {
     openRulesConfigModal();
   });
   sidebar.appendChild(rulesConfigBtn);
-
-  // Assigned Hours Navigation button in sidebar
-  const assignedHoursBtn = document.createElement('button');
-  assignedHoursBtn.className = 'sidebar-action-btn';
-  assignedHoursBtn.innerHTML = `⏱️ <span data-i18n="nav.assignedHours">${t('nav.assignedHours') || 'Assigned Hours'}</span>`;
-  assignedHoursBtn.addEventListener('click', () => {
-    openClassConfigPage();
-  });
-  sidebar.appendChild(assignedHoursBtn);
 
   sidebar.appendChild(sidebarDivider());
 
@@ -1189,221 +1212,29 @@ function renderApp(container: HTMLElement): void {
     panel.appendChild(grid);
 
     // Shift Schedule Section
-    const shiftSec = document.createElement('div');
-    shiftSec.className = 'shift-config-container';
-
-    const shiftHeader = document.createElement('div');
-    shiftHeader.className = 'shift-config-header';
-
-    const shiftTitle = document.createElement('div');
-    shiftTitle.className = 'shift-config-title';
-    shiftTitle.innerHTML = `<span style="display:inline-flex;align-items:center;gap:6px;">${icons.calendar || '📅'} <span>${t('settings.rulesShiftTitle') || 'Shift Schedules (Matched by Excel "Class" Column)'}</span></span>`;
-    shiftHeader.appendChild(shiftTitle);
-
-    const shiftActions = document.createElement('div');
-    shiftActions.style.cssText = 'display:flex;align-items:center;gap:var(--space-2);margin-left:auto;flex-wrap:wrap;';
-
-    const addShiftBtn = document.createElement('button');
-    addShiftBtn.type = 'button';
-    addShiftBtn.className = 'btn btn-secondary btn-sm';
-    addShiftBtn.innerHTML = `+ <span>${t('settings.rulesAddShift') || 'Add Shift'}</span>`;
-    addShiftBtn.addEventListener('click', () => {
-      const newShiftNo = prompt('Enter Shift No / Class (e.g. 99):');
-      if (!newShiftNo) return;
-      rulesConfig.shifts.unshift({
-        shiftNo: newShiftNo.trim(),
-        shiftName: 'Custom Shift',
-        startTime: '07:00',
-        lunchTime: '11:30~12:30',
-        endTime: '16:00',
-        overtime: [{ work: '16:00~18:00' }, { rest: '18:00~18:30' }],
-      });
-      rebuildShiftTable();
-      reapplyRulesAndRefresh();
-      showToast(t('settings.shiftAdded') || `Shift ${newShiftNo} added`, 'success');
-    });
-    shiftActions.appendChild(addShiftBtn);
+    // Dedicated Assigned Hours Navigation Card
+    const shiftLinkSec = document.createElement('div');
+    shiftLinkSec.className = 'settings-group-card';
+    shiftLinkSec.style.cssText = 'margin-top:var(--space-3);padding:var(--space-4);background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:var(--radius-md);display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);flex-wrap:wrap;';
+    shiftLinkSec.innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <span style="font-weight:600;font-size:0.95rem;display:inline-flex;align-items:center;gap:6px;">⏱️ <span>${t('settings.assignedHoursTitle') || 'Assigned Hours & Shift Schedules'}</span></span>
+        <span style="font-size:0.8rem;color:var(--text-muted);">${t('settings.assignedHoursDesc') || 'Configure working hours, lunch breaks, and overtime rules for each Class in the dedicated manager.'}</span>
+      </div>
+    `;
 
     const openAssignedBtn = document.createElement('button');
     openAssignedBtn.type = 'button';
-    openAssignedBtn.className = 'btn btn-secondary btn-sm';
+    openAssignedBtn.className = 'btn btn-primary btn-sm';
+    openAssignedBtn.style.cssText = 'display:inline-flex;align-items:center;gap:6px;font-weight:600;padding:6px 14px;';
     openAssignedBtn.innerHTML = `⏱️ <span>${t('settings.openAssignedHours') || 'Open Assigned Hours Page'}</span>`;
     openAssignedBtn.addEventListener('click', () => {
       const modalOverlay = panel.closest('.modal-overlay');
       if (modalOverlay) modalOverlay.remove();
       openClassConfigPage();
     });
-    shiftActions.appendChild(openAssignedBtn);
-
-    const resetBtn = document.createElement('button');
-    resetBtn.type = 'button';
-    resetBtn.className = 'btn btn-secondary btn-sm';
-    resetBtn.innerHTML = `${icons.rotateCcw} <span>${t('settings.rulesResetDefaults') || 'Reset Defaults'}</span>`;
-    resetBtn.addEventListener('click', () => {
-      if (confirm('Reset all shift schedules and remark rules to factory defaults?')) {
-        localStorage.removeItem('hr_portal_rules_config');
-        rulesConfig = JSON.parse(JSON.stringify(defaultRulesConfig));
-        reapplyRulesAndRefresh();
-        rebuildShiftTable();
-        renderContent();
-        showToast('Reset to default configurations', 'info');
-      }
-    });
-    shiftActions.appendChild(resetBtn);
-
-    shiftHeader.appendChild(shiftActions);
-    shiftSec.appendChild(shiftHeader);
-
-    const tableWrap = document.createElement('div');
-    tableWrap.className = 'shift-table-wrap';
-    tableWrap.style.overflowX = 'auto';
-
-    const table = document.createElement('table');
-    table.className = 'shift-table';
-    table.style.minWidth = '860px';
-    table.innerHTML = `
-      <thead>
-        <tr>
-          <th style="width:65px;">${t('settings.shiftNo') || 'Class'}</th>
-          <th style="min-width:140px;">${t('settings.shiftName') || 'Shift Name'}</th>
-          <th style="width:75px;">${t('settings.shiftStart') || 'Start Time'}</th>
-          <th style="width:105px;">${t('settings.shiftLunch') || 'Lunch / Break'}</th>
-          <th style="width:75px;">${t('settings.shiftEnd') || 'Get Off Work'}</th>
-          <th style="min-width:150px;">${t('settings.shiftOtWork') || 'OT Work Time'}</th>
-          <th style="min-width:130px;">${t('settings.shiftOtRest') || 'OT Rest Time'}</th>
-          <th style="width:50px;">${t('settings.shiftAction') || 'Action'}</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    `;
-    const tbody = table.querySelector('tbody')!;
-
-    const rebuildShiftTable = () => {
-      tbody.innerHTML = '';
-      rulesConfig.shifts.forEach((s, idx) => {
-        const tr = document.createElement('tr');
-
-        // Shift no / Class
-        const tdNo = document.createElement('td');
-        const inpNo = document.createElement('input');
-        inpNo.className = 'shift-input';
-        inpNo.value = s.shiftNo;
-        inpNo.style.maxWidth = '60px';
-        inpNo.addEventListener('change', () => {
-          s.shiftNo = inpNo.value.trim();
-          reapplyRulesAndRefresh();
-        });
-        tdNo.appendChild(inpNo);
-        tr.appendChild(tdNo);
-
-        // Shift name
-        const tdName = document.createElement('td');
-        const inpName = document.createElement('input');
-        inpName.className = 'shift-input';
-        inpName.value = s.shiftName;
-        inpName.style.minWidth = '135px';
-        inpName.addEventListener('change', () => {
-          s.shiftName = inpName.value.trim();
-          reapplyRulesAndRefresh();
-        });
-        tdName.appendChild(inpName);
-        tr.appendChild(tdName);
-
-        // Start time
-        const tdStart = document.createElement('td');
-        const inpStart = document.createElement('input');
-        inpStart.className = 'shift-input';
-        inpStart.value = s.startTime;
-        inpStart.style.maxWidth = '70px';
-        inpStart.placeholder = '07:00';
-        inpStart.addEventListener('change', () => {
-          s.startTime = inpStart.value.trim();
-          reapplyRulesAndRefresh();
-        });
-        tdStart.appendChild(inpStart);
-        tr.appendChild(tdStart);
-
-        // Lunch / Break time
-        const tdLunch = document.createElement('td');
-        const inpLunch = document.createElement('input');
-        inpLunch.className = 'shift-input';
-        inpLunch.value = s.lunchTime;
-        inpLunch.style.maxWidth = '105px';
-        inpLunch.placeholder = '11:30~12:30';
-        inpLunch.addEventListener('change', () => {
-          s.lunchTime = inpLunch.value.trim();
-          reapplyRulesAndRefresh();
-        });
-        tdLunch.appendChild(inpLunch);
-        tr.appendChild(tdLunch);
-
-        // End time
-        const tdEnd = document.createElement('td');
-        const inpEnd = document.createElement('input');
-        inpEnd.className = 'shift-input';
-        inpEnd.value = s.endTime;
-        inpEnd.style.maxWidth = '70px';
-        inpEnd.placeholder = '16:00';
-        inpEnd.addEventListener('change', () => {
-          s.endTime = inpEnd.value.trim();
-          reapplyRulesAndRefresh();
-        });
-        tdEnd.appendChild(inpEnd);
-        tr.appendChild(tdEnd);
-
-        // OT Work Time (direct visible input)
-        const tdOtWork = document.createElement('td');
-        const inpOtWork = document.createElement('input');
-        inpOtWork.className = 'shift-input';
-        inpOtWork.value = formatOtWork(s.overtime);
-        inpOtWork.style.minWidth = '150px';
-        inpOtWork.placeholder = '16:00~18:00, 18:30~19:30';
-
-        // OT Rest Time (direct visible input)
-        const tdOtRest = document.createElement('td');
-        const inpOtRest = document.createElement('input');
-        inpOtRest.className = 'shift-input';
-        inpOtRest.value = formatOtRest(s.overtime);
-        inpOtRest.style.minWidth = '120px';
-        inpOtRest.placeholder = '18:00~18:30';
-
-        const updateShiftOt = () => {
-          s.overtime = parseOt(inpOtWork.value, inpOtRest.value);
-          reapplyRulesAndRefresh();
-        };
-        inpOtWork.addEventListener('change', updateShiftOt);
-        inpOtRest.addEventListener('change', updateShiftOt);
-
-        tdOtWork.appendChild(inpOtWork);
-        tr.appendChild(tdOtWork);
-
-        tdOtRest.appendChild(inpOtRest);
-        tr.appendChild(tdOtRest);
-
-        // Action: Delete
-        const tdAct = document.createElement('td');
-        const delBtn = document.createElement('button');
-        delBtn.type = 'button';
-        delBtn.className = 'btn btn-secondary btn-sm';
-        delBtn.style.padding = '2px 8px';
-        delBtn.innerHTML = '✕';
-        delBtn.title = 'Delete Shift';
-        delBtn.addEventListener('click', () => {
-          rulesConfig.shifts.splice(idx, 1);
-          rebuildShiftTable();
-          reapplyRulesAndRefresh();
-        });
-        tdAct.appendChild(delBtn);
-        tr.appendChild(tdAct);
-
-        tbody.appendChild(tr);
-      });
-    };
-
-    rebuildShiftTable();
-    tableWrap.appendChild(table);
-    shiftSec.appendChild(tableWrap);
-    panel.appendChild(shiftSec);
+    shiftLinkSec.appendChild(openAssignedBtn);
+    panel.appendChild(shiftLinkSec);
 
     // Actions row: Reset to defaults
     const actionsRow = document.createElement('div');
@@ -1413,7 +1244,7 @@ function renderApp(container: HTMLElement): void {
     const resetRulesBtn = document.createElement('button');
     resetRulesBtn.type = 'button';
     resetRulesBtn.className = 'btn btn-secondary btn-sm';
-    resetRulesBtn.innerHTML = `${icons.rotateCcw} <span>${t('settings.rulesResetAll') || 'Reset all rules & shifts to defaults'}</span>`;
+    resetRulesBtn.innerHTML = `${icons.rotateCcw} <span>${t('settings.rulesResetAll') || 'Reset all rules to defaults'}</span>`;
     resetRulesBtn.addEventListener('click', () => {
       rulesConfig = JSON.parse(JSON.stringify(defaultRulesConfig));
       if (inputs.graceMinutes) inputs.graceMinutes.value = String(rulesConfig.graceMinutes);
@@ -1427,9 +1258,8 @@ function renderApp(container: HTMLElement): void {
       if (inputs.remarkNoCheckout) inputs.remarkNoCheckout.value = rulesConfig.remarkNoCheckout;
       if (inputs.remarkNoCheckin) inputs.remarkNoCheckin.value = rulesConfig.remarkNoCheckin;
       if (inputs.remarkNightShift) inputs.remarkNightShift.value = rulesConfig.remarkNightShift;
-      rebuildShiftTable();
       reapplyRulesAndRefresh();
-      showToast('All rules and shifts reset to defaults ✅', 'success');
+      showToast('All rules reset to defaults ✅', 'success');
     });
     actionsRow.appendChild(resetRulesBtn);
 
@@ -1437,7 +1267,7 @@ function renderApp(container: HTMLElement): void {
 
     const note = document.createElement('p');
     note.className = 'rules-note';
-    note.textContent = t('settings.rulesNote') || 'Shift schedule matches the "Class" column in uploaded Excel files. Defaults loaded from rules.json.';
+    note.textContent = t('settings.rulesNote') || 'Defaults loaded from rules.json. Shifts and overtime hours can be customized on the Assigned Hours page.';
     panel.appendChild(note);
 
     return panel;
