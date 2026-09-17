@@ -161,8 +161,17 @@
   "settings.shiftEnd": "ဆင်းချိန်",
   "settings.shiftAction": "လုပ်ဆောင်ချက်",
   "settings.shiftOvertime": "အချိန်ပို (OT)",
+  "settings.shiftOtWork": "OT လုပ်ချိန်",
+  "settings.shiftOtRest": "OT နားချိန်",
   "settings.rulesDesc": "ဖိုင်မတင်မီ သို့မဟုတ် တင်ပြီးနောက် အလှည့်ချိန်များ၊ နေ့လည်စာချိန်နုတ်ယူမှု၊ အချိန်ဆိုင်းငံ့မှုနှင့် မြန်မာမှတ်ချက်စည်းမျဉ်းများကို ကြိုတင်ပြင်ဆင်ပါ",
   "settings.addOvertimeBlock": "+ OT ကာလ ထပ်ထည့်ရန်",
+  "settings.openAssignedHours": "သတ်မှတ်ချိန်စာမျက်နှာ ဖွင့်ရန်",
   "preview.exportVisible": "Excel သို့ ထုတ်ယူရန်",
+  "nav.assignedHours": "သတ်မှတ်ချိန်များ",
+  "assigned.title": "Class အလိုက် သတ်မှတ်ချိန်နှင့် ဇယားများ",
+  "assigned.desc": "ဝန်ထမ်း Class အလိုက် အလုပ်ချိန်၊ နေ့လည်စာချိန်နှင့် အချိန်ပိုဇယားများကို ပြင်ဆင်ပါ။ ပြင်ဆင်မှုများသည် တွက်ချက်မှုတွင် ချက်ချင်းသက်ရောက်သည်။",
+  "assigned.searchPlaceholder": "Class အမည် သို့မဟုတ် အလှည့်နံပါတ်ဖြင့် ရှာပါ...",
+  "assigned.viewJson": "မူရင်း JSON ကြည့်ရန်",
+  "assigned.addShift": "+ Class အလှည့် အသစ်ထည့်ရန်",
   "settings.filterAllRemarks": "— မှတ်ချက်အားလုံး —"
 }

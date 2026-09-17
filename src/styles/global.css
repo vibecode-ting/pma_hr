@@ -2326,6 +2326,287 @@ h1, h2, h3, h4, h5 {
   font-weight: 500;
 }
 
+/* ── Class ID Hover Popover in Live View ─────────────────────────────────── */
+.class-hover-cell {
+  position: relative;
+  cursor: pointer;
+}
+
+.class-id-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  padding: 2px 7px;
+  border-radius: var(--radius-sm, 4px);
+  background: rgba(212, 175, 55, 0.15);
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  color: var(--gold-500);
+  font-weight: 700;
+  font-size: 0.8rem;
+  transition: all 120ms ease;
+}
+
+[data-theme="light"] .class-id-badge {
+  background: rgba(0, 0, 255, 0.08);
+  border-color: rgba(0, 0, 255, 0.30);
+  color: #0000FF;
+}
+
+.class-hover-cell:hover .class-id-badge {
+  transform: scale(1.06);
+  box-shadow: 0 0 8px var(--gold-glow);
+}
+
+.class-hover-popover {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%) translateY(4px);
+  width: 290px;
+  background: var(--bg-panel-raised);
+  border: 1px solid var(--border-gold);
+  border-radius: var(--radius-md, 8px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+  padding: 12px 14px;
+  z-index: 999;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 150ms ease, transform 150ms ease, visibility 150ms;
+  text-align: left;
+}
+
+[data-theme="light"] .class-hover-popover {
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+}
+
+.class-hover-cell:hover .class-hover-popover {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+}
+
+.class-popover-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-hairline);
+}
+
+.class-popover-shiftno {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--gold-500);
+}
+
+.class-popover-name {
+  font-size: 0.82rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.class-popover-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.77rem;
+}
+
+.class-popover-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.class-popover-label {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.class-popover-val {
+  color: var(--text-secondary);
+  font-weight: 600;
+  text-align: right;
+}
+
+.class-popover-action {
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--border-hairline);
+  font-size: 0.72rem;
+  color: var(--gold-500);
+  text-align: center;
+  font-weight: 600;
+}
+
+/* ── Assigned Hours Page Styles ──────────────────────────────────────────── */
+.assigned-hours-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding-bottom: 32px;
+}
+
+.assigned-hours-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: var(--space-2);
+}
+
+.assigned-hours-search {
+  max-width: 320px;
+  width: 100%;
+}
+
+.assigned-hours-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.assigned-hours-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 16px;
+}
+
+.assigned-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md, 8px);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.assigned-card:hover {
+  border-color: var(--border-gold);
+}
+
+.assigned-card.highlighted {
+  border-color: var(--gold-500);
+  box-shadow: 0 0 16px var(--gold-glow);
+  animation: pulseHighlight 2s ease-in-out;
+}
+
+@keyframes pulseHighlight {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+  100% { transform: scale(1); }
+}
+
+.assigned-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-hairline);
+}
+
+.assigned-card-badge {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--gold-500);
+  background: rgba(212, 175, 55, 0.12);
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+}
+
+[data-theme="light"] .assigned-card-badge {
+  color: #0000FF;
+  background: rgba(0, 0, 255, 0.08);
+}
+
+.assigned-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.assigned-field-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.assigned-field-label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.assigned-input {
+  background: var(--bg-inset);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-sm, 4px);
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  padding: 4px 8px;
+  outline: none;
+  transition: border-color 120ms ease;
+}
+
+.assigned-input:focus {
+  border-color: var(--border-gold);
+}
+
+.assigned-chips-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.assigned-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm, 4px);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.assigned-chip-work {
+  background: rgba(59, 130, 246, 0.12);
+  color: #60A5FA;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+[data-theme="light"] .assigned-chip-work {
+  background: rgba(0, 0, 255, 0.08);
+  color: #0000FF;
+  border-color: rgba(0, 0, 255, 0.25);
+}
+
+.assigned-chip-rest {
+  background: rgba(234, 179, 8, 0.12);
+  color: #FACC15;
+  border: 1px solid rgba(234, 179, 8, 0.3);
+}
+
+[data-theme="light"] .assigned-chip-rest {
+  background: rgba(180, 83, 9, 0.08);
+  color: #B45309;
+  border-color: rgba(180, 83, 9, 0.25);
+}
+
 /* ── Remark badges ────────────────────────────────────────────────────────── */
 
 .badge {

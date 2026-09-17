@@ -529,7 +529,11 @@ function renderRemarkCell(remark: string): HTMLTableCellElement {
  * Build the preview table for all provided rows.
  * Includes sticky header, Excel-like vertical grid borders, and scrollable container.
  */
-export function buildPreviewTable(rows: AttendanceRow[]): HTMLElement {
+export function buildPreviewTable(
+  rows: AttendanceRow[],
+  rulesConfig?: RulesConfig,
+  onOpenClassConfig?: (classId: string) => void
+): HTMLElement {
   let sortKey: string | null = null;
   let sortAsc = true;
   
@@ -704,6 +708,63 @@ export function buildPreviewTable(rows: AttendanceRow[]): HTMLElement {
             td.textContent = row.absent || '0';
           }
           tr.appendChild(td);
+        } else if (col.key === 'klass') {
+          const td = document.createElement('td');
+          td.className = 'col-numeric zawgyi-font class-hover-cell';
+          const val = String(row.klass ?? '').trim();
+          const shift = rulesConfig?.shifts?.find((s) => s.shiftNo === val);
+
+          const badge = document.createElement('span');
+          badge.className = 'class-id-badge';
+          badge.textContent = val || '—';
+
+          if (shift) {
+            badge.style.cursor = 'pointer';
+            badge.title = `${shift.shiftName} (${shift.startTime}~${shift.endTime})`;
+
+            const popover = document.createElement('div');
+            popover.className = 'class-hover-popover';
+
+            const otWorkStr = (shift.overtime || []).filter((o) => o.work).map((o) => o.work).join(', ') || '—';
+            const otRestStr = (shift.overtime || []).filter((o) => o.rest).map((o) => o.rest).join(', ') || '—';
+
+            popover.innerHTML = `
+              <div class="class-popover-header">
+                <span class="class-popover-shiftno">Class ${shift.shiftNo}</span>
+                <span class="class-popover-name">${shift.shiftName}</span>
+              </div>
+              <div class="class-popover-grid">
+                <div class="class-popover-row">
+                  <span class="class-popover-label">⏰ Work:</span>
+                  <span class="class-popover-val">${shift.startTime} ~ ${shift.endTime}</span>
+                </div>
+                <div class="class-popover-row">
+                  <span class="class-popover-label">🍽️ Break:</span>
+                  <span class="class-popover-val">${shift.lunchTime || '—'}</span>
+                </div>
+                <div class="class-popover-row">
+                  <span class="class-popover-label">⚡ OT Work:</span>
+                  <span class="class-popover-val">${otWorkStr}</span>
+                </div>
+                <div class="class-popover-row">
+                  <span class="class-popover-label">☕ OT Rest:</span>
+                  <span class="class-popover-val">${otRestStr}</span>
+                </div>
+              </div>
+              <div class="class-popover-action">
+                <span>Click to manage assigned hours ➔</span>
+              </div>
+            `;
+            td.appendChild(popover);
+
+            td.addEventListener('click', (e) => {
+              e.stopPropagation();
+              onOpenClassConfig?.(shift.shiftNo);
+            });
+          }
+
+          td.appendChild(badge);
+          tr.appendChild(td);
         } else {
           const td = document.createElement('td');
           const value = String(row[col.key] ?? '');
@@ -737,6 +798,7 @@ export function buildLivePreviewSection(
     onResetAll?: () => void;
     onDownload?: (btn: HTMLButtonElement) => void;
     onExportVisible?: (rows: AttendanceRow[]) => void;
+    onOpenClassConfig?: (classId: string) => void;
   }
 ): HTMLElement {
   const container = document.createElement('div');
@@ -1214,7 +1276,7 @@ export function buildLivePreviewSection(
 
     // Render table with filtered rows
     tableHolder.innerHTML = '';
-    tableHolder.appendChild(buildPreviewTable(filtered));
+    tableHolder.appendChild(buildPreviewTable(filtered, rulesConfig, callbacks?.onOpenClassConfig));
 
     onFilterChange(current);
   };

@@ -161,8 +161,17 @@
   "settings.shiftEnd": "下班時間",
   "settings.shiftAction": "操作",
   "settings.shiftOvertime": "加班 (OT)",
+  "settings.shiftOtWork": "加班工時",
+  "settings.shiftOtRest": "加班休息時間",
   "settings.rulesDesc": "在前或上傳後預先設定各班別工作時間、午餐扣除、寬限時間與緬文備註規則。",
   "settings.addOvertimeBlock": "+ 新增加班區間",
+  "settings.openAssignedHours": "開啟班別工時頁面",
   "preview.exportVisible": "匯出至 Excel",
+  "nav.assignedHours": "班別工時設定",
+  "assigned.title": "Class 班別工時與排班設定",
+  "assigned.desc": "設定各員工 Class 的上班時間、午餐時間及加班/休息時段。修改後將立即套用於即時預覽與匯出計算。",
+  "assigned.searchPlaceholder": "搜尋班別名稱或代號...",
+  "assigned.viewJson": "檢視原始 JSON",
+  "assigned.addShift": "+ 新增 Class 班別",
   "settings.filterAllRemarks": "— 所有備註 —"
 }

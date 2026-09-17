@@ -161,8 +161,17 @@
   "settings.shiftEnd": "Get Off Work",
   "settings.shiftAction": "Action",
   "settings.shiftOvertime": "Overtime",
+  "settings.shiftOtWork": "OT Work Time",
+  "settings.shiftOtRest": "OT Rest Time",
   "settings.rulesDesc": "Pre-configure shift working hours, lunch break deductions, grace periods, and Myanmar remark rules before or after uploading.",
   "settings.addOvertimeBlock": "+ Add Overtime Block",
+  "settings.openAssignedHours": "Open Assigned Hours Page",
   "preview.exportVisible": "Export to Excel",
+  "nav.assignedHours": "Assigned Hours",
+  "assigned.title": "Class Assigned Hours & Schedules",
+  "assigned.desc": "Configure work hours, lunch breaks, and overtime schedules per employee class. Changes immediately affect live calculations.",
+  "assigned.searchPlaceholder": "Search by class name or shift no...",
+  "assigned.viewJson": "View JSON Source",
+  "assigned.addShift": "+ Add Class Shift",
   "settings.filterAllRemarks": "— All Remarks —"
 }

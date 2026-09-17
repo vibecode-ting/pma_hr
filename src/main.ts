@@ -840,6 +840,15 @@ function renderApp(container: HTMLElement): void {
   });
   sidebar.appendChild(rulesConfigBtn);
 
+  // Assigned Hours Navigation button in sidebar
+  const assignedHoursBtn = document.createElement('button');
+  assignedHoursBtn.className = 'sidebar-action-btn';
+  assignedHoursBtn.innerHTML = `⏱️ <span data-i18n="nav.assignedHours">${t('nav.assignedHours') || 'Assigned Hours'}</span>`;
+  assignedHoursBtn.addEventListener('click', () => {
+    openClassConfigPage();
+  });
+  sidebar.appendChild(assignedHoursBtn);
+
   sidebar.appendChild(sidebarDivider());
 
   // Logout button
@@ -870,15 +879,16 @@ function renderApp(container: HTMLElement): void {
     }
   });
 
-  // ── Tab bar (2 tabs: 1. Upload Files, 2. Live Preview & Export) ──
-  let activeTab: 1 | 2 = 1;
+  // ── Tab bar (3 tabs: 1. Upload Files, 2. Live Preview & Export, 3. Assigned Hours) ──
+  let activeTab: 1 | 2 | 3 = 1;
 
   const tabBar = document.createElement('div');
   tabBar.className = 'app-tab-bar';
 
-  const tabs: { id: 1 | 2; labelKey: string; icon: string }[] = [
+  const tabs: { id: 1 | 2 | 3; labelKey: string; icon: string }[] = [
     { id: 1, labelKey: 'upload.heading', icon: icons.uploadCloud },
     { id: 2, labelKey: 'preview.heading', icon: icons.fileSpreadsheet },
+    { id: 3, labelKey: 'nav.assignedHours', icon: '⏱️' },
   ];
 
   function renderTabs(): void {
@@ -1056,22 +1066,43 @@ function renderApp(container: HTMLElement): void {
     return wrap;
   }
 
+  let targetHighlightClass: string | undefined;
+
+  const reapplyRulesAndRefresh = () => {
+    localStorage.setItem('hr_portal_rules_config', JSON.stringify(rulesConfig));
+    if (allRows.length > 0) {
+      applyRemarks(allRows, undefined, rulesConfig);
+      updateExportPreview();
+      if (activeTab === 2) {
+        renderContent();
+      }
+    }
+  };
+
+  function openClassConfigPage(classId?: string): void {
+    targetHighlightClass = classId;
+    activeTab = 3;
+    renderTabs();
+    renderContent();
+  }
+
+  const formatOtWork = (ot?: Array<{ work?: string; rest?: string }>) =>
+    (ot || []).filter((o) => o.work).map((o) => o.work).join(', ');
+
+  const formatOtRest = (ot?: Array<{ work?: string; rest?: string }>) =>
+    (ot || []).filter((o) => o.rest).map((o) => o.rest).join(', ');
+
+  const parseOt = (workStr: string, restStr: string) => {
+    const works = workStr.split(',').map((s) => s.trim()).filter(Boolean).map((w) => ({ work: w }));
+    const rests = restStr.split(',').map((s) => s.trim()).filter(Boolean).map((r) => ({ rest: r }));
+    return [...works, ...rests];
+  };
+
   function buildRulesConfigPanel(): HTMLElement {
     const panel = document.createElement('div');
     panel.className = 'rules-config-panel';
 
     const inputs: Record<string, HTMLInputElement> = {};
-
-    const reapplyRulesAndRefresh = () => {
-      localStorage.setItem('hr_portal_rules_config', JSON.stringify(rulesConfig));
-      if (allRows.length > 0) {
-        applyRemarks(allRows, undefined, rulesConfig);
-        updateExportPreview();
-        if (activeTab === 2) {
-          renderContent();
-        }
-      }
-    };
 
     const field = (
       key: 'graceMinutes' | 'earlyOutGraceMinutes' | 'otThresholdMinutes' | 'remarkLateSuffix' | 'remarkNoRecord' | 'remarkLeaveApplied' | 'remarkNoCheckout' | 'remarkNoCheckin' | 'remarkNightShift' | 'remarkOtSuffix' | 'remarkOtApplied',
@@ -1148,27 +1179,39 @@ function renderApp(container: HTMLElement): void {
     shiftHeader.appendChild(shiftTitle);
 
     const shiftActions = document.createElement('div');
-    shiftActions.style.cssText = 'display:flex;align-items:center;gap:var(--space-2);margin-left:auto;';
+    shiftActions.style.cssText = 'display:flex;align-items:center;gap:var(--space-2);margin-left:auto;flex-wrap:wrap;';
 
     const addShiftBtn = document.createElement('button');
     addShiftBtn.type = 'button';
     addShiftBtn.className = 'btn btn-secondary btn-sm';
-    addShiftBtn.innerHTML = t('settings.rulesAddShift') || '+ Add Shift';
+    addShiftBtn.innerHTML = `+ <span>${t('settings.rulesAddShift') || 'Add Shift'}</span>`;
     addShiftBtn.addEventListener('click', () => {
       const newShiftNo = prompt('Enter Shift No / Class (e.g. 99):');
       if (!newShiftNo) return;
-      rulesConfig.shifts.push({
+      rulesConfig.shifts.unshift({
         shiftNo: newShiftNo.trim(),
         shiftName: 'Custom Shift',
         startTime: '07:00',
         lunchTime: '11:30~12:30',
         endTime: '16:00',
+        overtime: [{ work: '16:00~18:00' }, { rest: '18:00~18:30' }],
       });
       rebuildShiftTable();
       reapplyRulesAndRefresh();
       showToast(t('settings.shiftAdded') || `Shift ${newShiftNo} added`, 'success');
     });
     shiftActions.appendChild(addShiftBtn);
+
+    const openAssignedBtn = document.createElement('button');
+    openAssignedBtn.type = 'button';
+    openAssignedBtn.className = 'btn btn-secondary btn-sm';
+    openAssignedBtn.innerHTML = `⏱️ <span>${t('settings.openAssignedHours') || 'Open Assigned Hours Page'}</span>`;
+    openAssignedBtn.addEventListener('click', () => {
+      const modalOverlay = panel.closest('.modal-overlay');
+      if (modalOverlay) modalOverlay.remove();
+      openClassConfigPage();
+    });
+    shiftActions.appendChild(openAssignedBtn);
 
     const resetBtn = document.createElement('button');
     resetBtn.type = 'button';
@@ -1179,6 +1222,7 @@ function renderApp(container: HTMLElement): void {
         localStorage.removeItem('hr_portal_rules_config');
         rulesConfig = JSON.parse(JSON.stringify(defaultRulesConfig));
         reapplyRulesAndRefresh();
+        rebuildShiftTable();
         renderContent();
         showToast('Reset to default configurations', 'info');
       }
@@ -1190,19 +1234,22 @@ function renderApp(container: HTMLElement): void {
 
     const tableWrap = document.createElement('div');
     tableWrap.className = 'shift-table-wrap';
+    tableWrap.style.overflowX = 'auto';
 
     const table = document.createElement('table');
     table.className = 'shift-table';
+    table.style.minWidth = '860px';
     table.innerHTML = `
       <thead>
         <tr>
-          <th>${t('settings.shiftNo') || 'Class (Shift No)'}</th>
-          <th>${t('settings.shiftName') || 'Shift Name'}</th>
-          <th>${t('settings.shiftStart') || 'Start Time'}</th>
-          <th>${t('settings.shiftLunch') || 'Lunch Time'}</th>
-          <th>${t('settings.shiftEnd') || 'Get Off Work'}</th>
-          <th>${t('settings.shiftOvertime') || 'Overtime'}</th>
-          <th>${t('settings.shiftAction') || 'Action'}</th>
+          <th style="width:65px;">${t('settings.shiftNo') || 'Class'}</th>
+          <th style="min-width:140px;">${t('settings.shiftName') || 'Shift Name'}</th>
+          <th style="width:75px;">${t('settings.shiftStart') || 'Start Time'}</th>
+          <th style="width:105px;">${t('settings.shiftLunch') || 'Lunch / Break'}</th>
+          <th style="width:75px;">${t('settings.shiftEnd') || 'Get Off Work'}</th>
+          <th style="min-width:150px;">${t('settings.shiftOtWork') || 'OT Work Time'}</th>
+          <th style="min-width:130px;">${t('settings.shiftOtRest') || 'OT Rest Time'}</th>
+          <th style="width:50px;">${t('settings.shiftAction') || 'Action'}</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -1214,12 +1261,12 @@ function renderApp(container: HTMLElement): void {
       rulesConfig.shifts.forEach((s, idx) => {
         const tr = document.createElement('tr');
 
-        // Shift no
+        // Shift no / Class
         const tdNo = document.createElement('td');
         const inpNo = document.createElement('input');
         inpNo.className = 'shift-input';
         inpNo.value = s.shiftNo;
-        inpNo.style.maxWidth = '65px';
+        inpNo.style.maxWidth = '60px';
         inpNo.addEventListener('change', () => {
           s.shiftNo = inpNo.value.trim();
           reapplyRulesAndRefresh();
@@ -1232,9 +1279,10 @@ function renderApp(container: HTMLElement): void {
         const inpName = document.createElement('input');
         inpName.className = 'shift-input';
         inpName.value = s.shiftName;
-        inpName.style.maxWidth = '190px';
+        inpName.style.minWidth = '135px';
         inpName.addEventListener('change', () => {
           s.shiftName = inpName.value.trim();
+          reapplyRulesAndRefresh();
         });
         tdName.appendChild(inpName);
         tr.appendChild(tdName);
@@ -1244,7 +1292,7 @@ function renderApp(container: HTMLElement): void {
         const inpStart = document.createElement('input');
         inpStart.className = 'shift-input';
         inpStart.value = s.startTime;
-        inpStart.style.maxWidth = '75px';
+        inpStart.style.maxWidth = '70px';
         inpStart.placeholder = '07:00';
         inpStart.addEventListener('change', () => {
           s.startTime = inpStart.value.trim();
@@ -1253,12 +1301,12 @@ function renderApp(container: HTMLElement): void {
         tdStart.appendChild(inpStart);
         tr.appendChild(tdStart);
 
-        // Lunch time
+        // Lunch / Break time
         const tdLunch = document.createElement('td');
         const inpLunch = document.createElement('input');
         inpLunch.className = 'shift-input';
         inpLunch.value = s.lunchTime;
-        inpLunch.style.maxWidth = '115px';
+        inpLunch.style.maxWidth = '105px';
         inpLunch.placeholder = '11:30~12:30';
         inpLunch.addEventListener('change', () => {
           s.lunchTime = inpLunch.value.trim();
@@ -1272,7 +1320,7 @@ function renderApp(container: HTMLElement): void {
         const inpEnd = document.createElement('input');
         inpEnd.className = 'shift-input';
         inpEnd.value = s.endTime;
-        inpEnd.style.maxWidth = '75px';
+        inpEnd.style.maxWidth = '70px';
         inpEnd.placeholder = '16:00';
         inpEnd.addEventListener('change', () => {
           s.endTime = inpEnd.value.trim();
@@ -1281,27 +1329,34 @@ function renderApp(container: HTMLElement): void {
         tdEnd.appendChild(inpEnd);
         tr.appendChild(tdEnd);
 
-        // Overtime
-        const tdOt = document.createElement('td');
-        const otSummary = document.createElement('span');
-        otSummary.style.fontSize = '0.85em';
-        otSummary.style.marginRight = '8px';
-        const renderOtSummary = () => {
-          if (!s.overtime || s.overtime.length === 0) {
-            otSummary.textContent = 'None';
-          } else {
-            otSummary.textContent = `${s.overtime.length} blocks`;
-          }
+        // OT Work Time (direct visible input)
+        const tdOtWork = document.createElement('td');
+        const inpOtWork = document.createElement('input');
+        inpOtWork.className = 'shift-input';
+        inpOtWork.value = formatOtWork(s.overtime);
+        inpOtWork.style.minWidth = '150px';
+        inpOtWork.placeholder = '16:00~18:00, 18:30~19:30';
+
+        // OT Rest Time (direct visible input)
+        const tdOtRest = document.createElement('td');
+        const inpOtRest = document.createElement('input');
+        inpOtRest.className = 'shift-input';
+        inpOtRest.value = formatOtRest(s.overtime);
+        inpOtRest.style.minWidth = '120px';
+        inpOtRest.placeholder = '18:00~18:30';
+
+        const updateShiftOt = () => {
+          s.overtime = parseOt(inpOtWork.value, inpOtRest.value);
+          reapplyRulesAndRefresh();
         };
-        renderOtSummary();
-        const otBtn = document.createElement('button');
-        otBtn.type = 'button';
-        otBtn.className = 'btn btn-secondary btn-sm';
-        otBtn.style.padding = '2px 6px';
-        otBtn.innerHTML = '✎';
-        tdOt.appendChild(otSummary);
-        tdOt.appendChild(otBtn);
-        tr.appendChild(tdOt);
+        inpOtWork.addEventListener('change', updateShiftOt);
+        inpOtRest.addEventListener('change', updateShiftOt);
+
+        tdOtWork.appendChild(inpOtWork);
+        tr.appendChild(tdOtWork);
+
+        tdOtRest.appendChild(inpOtRest);
+        tr.appendChild(tdOtRest);
 
         // Action: Delete
         const tdAct = document.createElement('td');
@@ -1319,105 +1374,7 @@ function renderApp(container: HTMLElement): void {
         tdAct.appendChild(delBtn);
         tr.appendChild(tdAct);
 
-        const trExpand = document.createElement('tr');
-        trExpand.style.display = 'none';
-        const tdExpand = document.createElement('td');
-        tdExpand.colSpan = 7;
-        tdExpand.style.backgroundColor = 'var(--bg-panel-raised)';
-        tdExpand.style.padding = '12px';
-        
-        const renderOtEditor = () => {
-          tdExpand.innerHTML = '';
-          const otWrap = document.createElement('div');
-          otWrap.style.display = 'flex';
-          otWrap.style.flexDirection = 'column';
-          otWrap.style.gap = '8px';
-          
-          if (!s.overtime) s.overtime = [];
-          
-          s.overtime.forEach((ot, otIdx) => {
-            const row = document.createElement('div');
-            row.style.display = 'flex';
-            row.style.gap = '8px';
-            row.style.alignItems = 'center';
-            
-            const typeSel = document.createElement('select');
-            typeSel.className = 'form-input shift-input';
-            typeSel.style.width = '80px';
-            const optWork = document.createElement('option');
-            optWork.value = 'work';
-            optWork.text = 'Work';
-            const optRest = document.createElement('option');
-            optRest.value = 'rest';
-            optRest.text = 'Rest';
-            typeSel.appendChild(optWork);
-            typeSel.appendChild(optRest);
-            typeSel.value = ot.work !== undefined ? 'work' : 'rest';
-            
-            const timeInp = document.createElement('input');
-            timeInp.className = 'form-input shift-input';
-            timeInp.style.width = '120px';
-            timeInp.value = ot.work !== undefined ? ot.work : (ot.rest || '');
-            timeInp.placeholder = '13:00~15:00';
-            
-            const updateOt = () => {
-              const tVal = timeInp.value.trim();
-              if (typeSel.value === 'work') {
-                s.overtime![otIdx] = { work: tVal };
-              } else {
-                s.overtime![otIdx] = { rest: tVal };
-              }
-              renderOtSummary();
-              reapplyRulesAndRefresh();
-            };
-            typeSel.addEventListener('change', updateOt);
-            timeInp.addEventListener('change', updateOt);
-            
-            const delOtBtn = document.createElement('button');
-            delOtBtn.type = 'button';
-            delOtBtn.className = 'btn btn-secondary btn-sm';
-            delOtBtn.innerHTML = '✕';
-            delOtBtn.addEventListener('click', () => {
-              s.overtime!.splice(otIdx, 1);
-              renderOtEditor();
-              renderOtSummary();
-              reapplyRulesAndRefresh();
-            });
-            
-            row.appendChild(typeSel);
-            row.appendChild(timeInp);
-            row.appendChild(delOtBtn);
-            otWrap.appendChild(row);
-          });
-          
-          const addOtBtn = document.createElement('button');
-          addOtBtn.type = 'button';
-          addOtBtn.className = 'btn btn-secondary btn-sm';
-          addOtBtn.style.alignSelf = 'flex-start';
-          addOtBtn.innerHTML = t('settings.addOvertimeBlock') || '+ Add Overtime Block';
-          addOtBtn.addEventListener('click', () => {
-            if (!s.overtime) s.overtime = [];
-            s.overtime.push({ work: '' });
-            renderOtEditor();
-            renderOtSummary();
-          });
-          otWrap.appendChild(addOtBtn);
-          tdExpand.appendChild(otWrap);
-        };
-        
-        otBtn.addEventListener('click', () => {
-          if (trExpand.style.display === 'none') {
-            trExpand.style.display = 'table-row';
-            renderOtEditor();
-          } else {
-            trExpand.style.display = 'none';
-          }
-        });
-        
-        trExpand.appendChild(tdExpand);
-
         tbody.appendChild(tr);
-        tbody.appendChild(trExpand);
       });
     };
 
@@ -1485,7 +1442,356 @@ function renderApp(container: HTMLElement): void {
     return wrap;
   }
 
-  // ── TAB 3: Preview ──
+  // ── TAB 3: Assigned Hours (Class Schedules & Overtime Manager) ──
+  function buildAssignedHoursSection(): HTMLElement {
+    const wrap = document.createElement('div');
+    wrap.className = 'assigned-hours-container';
+
+    // Section Header Card
+    const headerCard = sectionCard('⏱️', 'assigned.title');
+    const cardTop = document.createElement('div');
+    cardTop.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin:-8px 0 var(--space-4) 0;flex-wrap:wrap;gap:var(--space-2);';
+
+    const subDesc = document.createElement('p');
+    subDesc.style.cssText = 'color:var(--text-muted);font-size:0.85rem;margin:0;';
+    subDesc.textContent = t('assigned.desc') || 'Configure work hours, lunch breaks, and overtime schedules per employee class. Changes immediately affect live calculations.';
+    cardTop.appendChild(subDesc);
+    headerCard.appendChild(cardTop);
+
+    // Toolbar: Search Input + Action Buttons + Count Badge
+    const toolbar = document.createElement('div');
+    toolbar.className = 'assigned-hours-toolbar';
+
+    const searchInp = document.createElement('input');
+    searchInp.type = 'text';
+    searchInp.className = 'form-input assigned-hours-search';
+    searchInp.placeholder = t('assigned.searchPlaceholder') || 'Search by class name or shift no...';
+
+    const actionsWrap = document.createElement('div');
+    actionsWrap.className = 'assigned-hours-actions';
+
+    const countBadge = document.createElement('span');
+    countBadge.className = 'stat-badge stat-total';
+
+    const addShiftBtn = document.createElement('button');
+    addShiftBtn.type = 'button';
+    addShiftBtn.className = 'btn btn-primary btn-sm';
+    addShiftBtn.innerHTML = `+ <span>${t('assigned.addShift') || 'Add Class Shift'}</span>`;
+    addShiftBtn.addEventListener('click', () => {
+      const newClass = prompt('Enter Shift No / Class (e.g. 99):');
+      if (!newClass) return;
+      rulesConfig.shifts.unshift({
+        shiftNo: newClass.trim(),
+        shiftName: 'New Class Shift',
+        startTime: '07:00',
+        lunchTime: '12:00~13:00',
+        endTime: '16:00',
+        overtime: [{ work: '16:00~18:00' }, { rest: '18:00~18:30' }],
+      });
+      reapplyRulesAndRefresh();
+      renderCards();
+      showToast(`Added Class ${newClass}`, 'success');
+    });
+
+    const resetBtn = document.createElement('button');
+    resetBtn.type = 'button';
+    resetBtn.className = 'btn btn-secondary btn-sm';
+    resetBtn.innerHTML = `${icons.rotateCcw} <span>${t('settings.rulesResetDefaults') || 'Reset Defaults'}</span>`;
+    resetBtn.addEventListener('click', () => {
+      if (confirm('Reset all assigned hours to factory defaults?')) {
+        localStorage.removeItem('hr_portal_rules_config');
+        rulesConfig = JSON.parse(JSON.stringify(defaultRulesConfig));
+        reapplyRulesAndRefresh();
+        renderCards();
+        showToast('Reset to default assigned hours', 'info');
+      }
+    });
+
+    const rawJsonBtn = document.createElement('button');
+    rawJsonBtn.type = 'button';
+    rawJsonBtn.className = 'btn btn-secondary btn-sm';
+    rawJsonBtn.innerHTML = `<span>📋</span> <span>${t('assigned.viewJson') || 'View JSON Source'}</span>`;
+    rawJsonBtn.addEventListener('click', () => {
+      openJsonModal();
+    });
+
+    actionsWrap.appendChild(countBadge);
+    actionsWrap.appendChild(addShiftBtn);
+    actionsWrap.appendChild(rawJsonBtn);
+    actionsWrap.appendChild(resetBtn);
+
+    toolbar.appendChild(searchInp);
+    toolbar.appendChild(actionsWrap);
+    headerCard.appendChild(toolbar);
+
+    // Cards Grid
+    const grid = document.createElement('div');
+    grid.className = 'assigned-hours-grid';
+
+    const renderCards = () => {
+      grid.innerHTML = '';
+      const query = searchInp.value.trim().toLowerCase();
+      const filteredShifts = rulesConfig.shifts.filter((s) =>
+        s.shiftNo.toLowerCase().includes(query) || s.shiftName.toLowerCase().includes(query)
+      );
+
+      countBadge.textContent = `${rulesConfig.shifts.length} Classes`;
+
+      filteredShifts.forEach((s) => {
+        const card = document.createElement('div');
+        card.className = 'assigned-card';
+        if (targetHighlightClass && s.shiftNo.toLowerCase() === targetHighlightClass.toLowerCase()) {
+          card.classList.add('highlighted');
+          setTimeout(() => {
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 150);
+        }
+
+        // Card Header
+        const head = document.createElement('div');
+        head.className = 'assigned-card-head';
+        head.innerHTML = `
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="assigned-card-badge">Class ${s.shiftNo}</span>
+          </div>
+        `;
+
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.className = 'btn btn-secondary btn-sm';
+        delBtn.style.padding = '2px 8px';
+        delBtn.textContent = '✕';
+        delBtn.title = 'Delete Shift';
+        delBtn.addEventListener('click', () => {
+          const idx = rulesConfig.shifts.indexOf(s);
+          if (idx !== -1) {
+            rulesConfig.shifts.splice(idx, 1);
+            reapplyRulesAndRefresh();
+            renderCards();
+            showToast(`Deleted Class ${s.shiftNo}`, 'info');
+          }
+        });
+        head.appendChild(delBtn);
+        card.appendChild(head);
+
+        // Card Body
+        const body = document.createElement('div');
+        body.className = 'assigned-card-body';
+
+        // Field: Shift Name
+        const nameRow = document.createElement('div');
+        nameRow.className = 'assigned-field-row';
+        nameRow.innerHTML = `<span class="assigned-field-label">Name:</span>`;
+        const nameInp = document.createElement('input');
+        nameInp.className = 'assigned-input';
+        nameInp.style.flex = '1';
+        nameInp.value = s.shiftName;
+        nameInp.addEventListener('change', () => {
+          s.shiftName = nameInp.value.trim();
+          reapplyRulesAndRefresh();
+        });
+        nameRow.appendChild(nameInp);
+        body.appendChild(nameRow);
+
+        // Field: Work Hours (Start ~ End)
+        const timeRow = document.createElement('div');
+        timeRow.className = 'assigned-field-row';
+        timeRow.innerHTML = `<span class="assigned-field-label">Work Hours:</span>`;
+        const timeWrap = document.createElement('div');
+        timeWrap.style.cssText = 'display:flex;align-items:center;gap:6px;';
+
+        const startInp = document.createElement('input');
+        startInp.className = 'assigned-input';
+        startInp.style.width = '75px';
+        startInp.value = s.startTime;
+        startInp.placeholder = '07:00';
+        startInp.addEventListener('change', () => {
+          s.startTime = startInp.value.trim();
+          reapplyRulesAndRefresh();
+        });
+
+        const arrow = document.createElement('span');
+        arrow.textContent = '➔';
+        arrow.style.cssText = 'color:var(--text-muted);font-size:0.8rem;';
+
+        const endInp = document.createElement('input');
+        endInp.className = 'assigned-input';
+        endInp.style.width = '75px';
+        endInp.value = s.endTime;
+        endInp.placeholder = '16:00';
+        endInp.addEventListener('change', () => {
+          s.endTime = endInp.value.trim();
+          reapplyRulesAndRefresh();
+        });
+
+        timeWrap.appendChild(startInp);
+        timeWrap.appendChild(arrow);
+        timeWrap.appendChild(endInp);
+        timeRow.appendChild(timeWrap);
+        body.appendChild(timeRow);
+
+        // Field: Break / Lunch Time
+        const lunchRow = document.createElement('div');
+        lunchRow.className = 'assigned-field-row';
+        lunchRow.innerHTML = `<span class="assigned-field-label">Break Time:</span>`;
+        const lunchInp = document.createElement('input');
+        lunchInp.className = 'assigned-input';
+        lunchInp.style.width = '120px';
+        lunchInp.value = s.lunchTime;
+        lunchInp.placeholder = '12:00~13:00';
+        lunchInp.addEventListener('change', () => {
+          s.lunchTime = lunchInp.value.trim();
+          reapplyRulesAndRefresh();
+        });
+        lunchRow.appendChild(lunchInp);
+        body.appendChild(lunchRow);
+
+        // Field: Overtime Work Time
+        const otWorkRow = document.createElement('div');
+        otWorkRow.className = 'assigned-field-row';
+        otWorkRow.style.alignItems = 'flex-start';
+        otWorkRow.innerHTML = `<span class="assigned-field-label" style="margin-top:5px;">OT Work:</span>`;
+        const otWorkWrap = document.createElement('div');
+        otWorkWrap.style.cssText = 'display:flex;flex-direction:column;gap:4px;flex:1;';
+
+        const otWorkInp = document.createElement('input');
+        otWorkInp.className = 'assigned-input';
+        otWorkInp.style.width = '100%';
+        otWorkInp.value = formatOtWork(s.overtime);
+        otWorkInp.placeholder = 'e.g. 16:00~18:00, 18:30~19:30';
+
+        const otWorkChips = document.createElement('div');
+        otWorkChips.className = 'assigned-chips-wrap';
+        const refreshWorkChips = () => {
+          otWorkChips.innerHTML = '';
+          (s.overtime || []).filter((o) => o.work).forEach((w) => {
+            const chip = document.createElement('span');
+            chip.className = 'assigned-chip assigned-chip-work';
+            chip.textContent = `⚡ ${w.work}`;
+            otWorkChips.appendChild(chip);
+          });
+        };
+        refreshWorkChips();
+
+        otWorkInp.addEventListener('change', () => {
+          s.overtime = parseOt(otWorkInp.value, otRestInp.value);
+          refreshWorkChips();
+          reapplyRulesAndRefresh();
+        });
+
+        otWorkWrap.appendChild(otWorkInp);
+        otWorkWrap.appendChild(otWorkChips);
+        otWorkRow.appendChild(otWorkWrap);
+        body.appendChild(otWorkRow);
+
+        // Field: Overtime Rest Time
+        const otRestRow = document.createElement('div');
+        otRestRow.className = 'assigned-field-row';
+        otRestRow.style.alignItems = 'flex-start';
+        otRestRow.innerHTML = `<span class="assigned-field-label" style="margin-top:5px;">OT Rest:</span>`;
+        const otRestWrap = document.createElement('div');
+        otRestWrap.style.cssText = 'display:flex;flex-direction:column;gap:4px;flex:1;';
+
+        const otRestInp = document.createElement('input');
+        otRestInp.className = 'assigned-input';
+        otRestInp.style.width = '100%';
+        otRestInp.value = formatOtRest(s.overtime);
+        otRestInp.placeholder = 'e.g. 18:00~18:30';
+
+        const otRestChips = document.createElement('div');
+        otRestChips.className = 'assigned-chips-wrap';
+        const refreshRestChips = () => {
+          otRestChips.innerHTML = '';
+          (s.overtime || []).filter((o) => o.rest).forEach((r) => {
+            const chip = document.createElement('span');
+            chip.className = 'assigned-chip assigned-chip-rest';
+            chip.textContent = `☕ ${r.rest}`;
+            otRestChips.appendChild(chip);
+          });
+        };
+        refreshRestChips();
+
+        otRestInp.addEventListener('change', () => {
+          s.overtime = parseOt(otWorkInp.value, otRestInp.value);
+          refreshRestChips();
+          reapplyRulesAndRefresh();
+        });
+
+        otRestWrap.appendChild(otRestInp);
+        otRestWrap.appendChild(otRestChips);
+        otRestRow.appendChild(otRestWrap);
+        body.appendChild(otRestRow);
+
+        card.appendChild(body);
+        grid.appendChild(card);
+      });
+    };
+
+    searchInp.addEventListener('input', renderCards);
+    renderCards();
+
+    headerCard.appendChild(grid);
+    wrap.appendChild(headerCard);
+
+    function openJsonModal(): void {
+      const modalOverlay = document.createElement('div');
+      modalOverlay.className = 'modal-overlay';
+      modalOverlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:20px;';
+
+      const modalCard = document.createElement('div');
+      modalCard.className = 'modal-card';
+      modalCard.style.cssText = 'background:var(--bg-panel);color:var(--text-primary);border:1px solid var(--border-hairline);border-radius:var(--radius-lg);max-width:760px;width:100%;max-height:85vh;display:flex;flex-direction:column;padding:20px;gap:14px;box-shadow:0 20px 60px rgba(0,0,0,0.7);';
+
+      const mHeader = document.createElement('div');
+      mHeader.style.cssText = 'display:flex;align-items:center;justify-content:space-between;';
+      mHeader.innerHTML = `<h3 style="margin:0;font-size:1.1rem;display:flex;align-items:center;gap:8px;"><span>📋</span> <span>Class Assigned Hours JSON Source</span></h3>`;
+      const mClose = document.createElement('button');
+      mClose.className = 'btn btn-secondary btn-sm';
+      mClose.textContent = '✕ Close';
+      mClose.addEventListener('click', () => modalOverlay.remove());
+      mHeader.appendChild(mClose);
+      modalCard.appendChild(mHeader);
+
+      const mDesc = document.createElement('p');
+      mDesc.style.cssText = 'color:var(--text-muted);font-size:0.83rem;margin:0;';
+      mDesc.textContent = 'You can inspect or directly edit the raw shift array below. Click "Apply & Save JSON" to update.';
+      modalCard.appendChild(mDesc);
+
+      const txtArea = document.createElement('textarea');
+      txtArea.className = 'form-input';
+      txtArea.style.cssText = 'font-family:monospace;font-size:0.8rem;height:380px;width:100%;resize:vertical;line-height:1.4;';
+      txtArea.value = JSON.stringify(rulesConfig.shifts, null, 2);
+      modalCard.appendChild(txtArea);
+
+      const mFooter = document.createElement('div');
+      mFooter.style.cssText = 'display:flex;justify-content:flex-end;gap:8px;';
+      const applyBtn = document.createElement('button');
+      applyBtn.className = 'btn btn-primary btn-sm';
+      applyBtn.textContent = 'Apply & Save JSON';
+      applyBtn.addEventListener('click', () => {
+        try {
+          const parsed = JSON.parse(txtArea.value);
+          if (!Array.isArray(parsed)) throw new Error('Root must be an array of shifts.');
+          rulesConfig.shifts = parsed;
+          reapplyRulesAndRefresh();
+          renderCards();
+          modalOverlay.remove();
+          showToast('Applied raw JSON configuration ✅', 'success');
+        } catch (err) {
+          alert('Invalid JSON: ' + String(err));
+        }
+      });
+      mFooter.appendChild(applyBtn);
+      modalCard.appendChild(mFooter);
+
+      modalOverlay.appendChild(modalCard);
+      document.body.appendChild(modalOverlay);
+    }
+
+    return wrap;
+  }
+
+  // ── TAB 2: Preview ──
   function buildPreviewSection(): HTMLElement {
     const callbacks = {
       onResetAll: resetAll,
@@ -1514,6 +1820,9 @@ function renderApp(container: HTMLElement): void {
           showToast(String(e), 'error');
         }
       },
+      onOpenClassConfig: (classId: string) => {
+        openClassConfigPage(classId);
+      },
     };
 
     const visibleRows = getVisibleRows();
@@ -1536,6 +1845,9 @@ function renderApp(container: HTMLElement): void {
     } else if (activeTab === 2) {
       contentPanel.classList.add('live-view-fullscreen');
       contentPanel.appendChild(buildPreviewSection());
+    } else if (activeTab === 3) {
+      contentPanel.classList.remove('live-view-fullscreen');
+      contentPanel.appendChild(buildAssignedHoursSection());
     }
 
     applyAll();
