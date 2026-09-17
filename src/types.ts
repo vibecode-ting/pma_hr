@@ -97,6 +97,8 @@ export interface LiveFilterState {
  */
 export type Locale = 'en' | 'my' | 'zh-Hant';
 
+export type FontMode = 'zawgyi' | 'unicode';
+
 /**
  * Session data stored in sessionStorage after successful login.
  */

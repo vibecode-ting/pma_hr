@@ -2216,9 +2216,45 @@ h1, h2, h3, h4, h5 {
   font-family: 'Zawgyi-One', 'Zawgyi01', 'Masterpiece Uni Sans', sans-serif !important;
 }
 
-/* Remarks are generated as Zawgyi — use Zawgyi-One font */
+/* Live view table font switching modes */
+.live-preview-table.font-mode-unicode tbody td,
+.live-preview-table.font-mode-unicode tbody .remark-text,
+.live-preview-table.font-mode-unicode tbody .myanmar-unicode-font {
+  font-family: 'Noto Sans Myanmar', 'Myanmar Text', 'Padauk', sans-serif !important;
+}
+
+.live-preview-table.font-mode-zawgyi tbody td,
+.live-preview-table.font-mode-zawgyi tbody .remark-text,
+.live-preview-table.font-mode-zawgyi tbody .zawgyi-font {
+  font-family: 'Zawgyi-One', 'Zawgyi01', 'Masterpiece Uni Sans', sans-serif !important;
+  font-feature-settings: "liga" 0 !important;
+}
+
 .col-remark-cell .remark-text.zawgyi-font {
   font-family: 'Zawgyi-One', 'Zawgyi01', 'Masterpiece Uni Sans', sans-serif !important;
+  font-feature-settings: "liga" 0 !important;
+}
+
+.col-remark-cell .remark-text.myanmar-unicode-font {
+  font-family: 'Noto Sans Myanmar', 'Myanmar Text', 'Padauk', sans-serif !important;
+}
+
+.font-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.15s ease;
+}
+
+.font-toggle-btn .font-mode-label strong {
+  color: var(--accent-gold);
+}
+
+[data-theme="light"] .font-toggle-btn .font-mode-label strong {
+  color: #0000FF;
 }
 
 .preview-table thead th,

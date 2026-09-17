@@ -9,7 +9,7 @@
 
 import './styles/global.css';
 import { initLocale, setLocale, getLocale, applyAll, t } from './i18n';
-import type { AppConfig, AttendanceRow, ExportMode, SessionData, Theme, LiveFilterState, RulesConfig } from './types';
+import type { AppConfig, AttendanceRow, ExportMode, SessionData, Theme, LiveFilterState, RulesConfig, FontMode } from './types';
 import { parseAllFiles } from './parse';
 import {
   applyRemarks,
@@ -74,6 +74,7 @@ let exportMode: ExportMode = 'per-group';
 let parseErrors: string[] = [];
 let parseWarnings: string[] = [];
 let activeFilter: LiveFilterState = { idNo: '', name: '', groupCode: '', date: '', klass: '', remarks: '', absent: '', overtime: '', hideResolved: true, hideFutureShifts: true, hideApplied: true };
+let fontMode: FontMode = (localStorage.getItem('hr_portal_font_mode') as FontMode) || 'zawgyi';
 
 const SESSION_KEY = 'hr_portal_session';
 const THEME_STORAGE_KEY = 'hr_portal_theme';
@@ -401,7 +402,7 @@ function renderApp(container: HTMLElement): void {
       const exportRows = activeFilter.hideResolved !== false
         ? allRows.filter((r) => !isRowResolved(r))
         : allRows;
-      await exportSelection(exportRows, selectedGroups, exportMode, (msg) => showToast(msg, 'info'));
+      await exportSelection(exportRows, selectedGroups, exportMode, (msg) => showToast(msg, 'info'), fontMode);
       showToast(t('export.generate') + ' ✅', 'success');
     } catch (e) { showToast(String(e), 'error'); }
     btn.disabled = false;
@@ -1071,7 +1072,7 @@ function renderApp(container: HTMLElement): void {
   const reapplyRulesAndRefresh = () => {
     localStorage.setItem('hr_portal_rules_config', JSON.stringify(rulesConfig));
     if (allRows.length > 0) {
-      applyRemarks(allRows, undefined, rulesConfig);
+      applyRemarks(allRows, undefined, rulesConfig, undefined, undefined, fontMode);
       updateExportPreview();
       if (activeTab === 2) {
         renderContent();
@@ -1802,7 +1803,7 @@ function renderApp(container: HTMLElement): void {
           const exportRows = activeFilter.hideResolved !== false
             ? allRows.filter((r) => !isRowResolved(r))
             : allRows;
-          await exportSelection(exportRows, selectedGroups, exportMode, (msg) => showToast(msg, 'info'));
+          await exportSelection(exportRows, selectedGroups, exportMode, (msg) => showToast(msg, 'info'), fontMode);
           showToast(t('export.generate') + ' ✅', 'success');
         } catch (e) { showToast(String(e), 'error'); }
         btn.disabled = false;
@@ -1814,7 +1815,7 @@ function renderApp(container: HTMLElement): void {
           return;
         }
         try {
-          exportVisibleRows(filteredRows, 'attendance_live_view.xlsx');
+          exportVisibleRows(filteredRows, 'attendance_live_view.xlsx', fontMode);
           showToast(t('export.generate') + ' ✅', 'success');
         } catch (e) {
           showToast(String(e), 'error');
@@ -1823,10 +1824,20 @@ function renderApp(container: HTMLElement): void {
       onOpenClassConfig: (classId: string) => {
         openClassConfigPage(classId);
       },
+      onFontModeChange: (newMode: FontMode) => {
+        fontMode = newMode;
+        localStorage.setItem('hr_portal_font_mode', fontMode);
+        if (allRows.length > 0) {
+          applyRemarks(allRows, undefined, rulesConfig, undefined, undefined, fontMode);
+          updateExportPreview();
+          renderContent();
+        }
+        showToast(`Font switched to ${newMode === 'zawgyi' ? 'Zawgyi' : 'Unicode'} ✅`, 'info');
+      },
     };
 
     const visibleRows = getVisibleRows();
-    return buildLivePreviewSection(visibleRows, activeFilter, (f) => { activeFilter = f; }, rulesConfig, callbacks);
+    return buildLivePreviewSection(visibleRows, activeFilter, (f) => { activeFilter = f; }, rulesConfig, callbacks, fontMode);
   }
 
   // ── Content render ──
@@ -1894,7 +1905,7 @@ function renderApp(container: HTMLElement): void {
     const { rows, errors } = await parseAllFiles(uploadedFiles);
     parseErrors = errors;
     const warnings: string[] = [];
-    applyRemarks(rows, (msg) => warnings.push(msg), rulesConfig);
+    applyRemarks(rows, (msg) => warnings.push(msg), rulesConfig, undefined, undefined, fontMode);
     parseWarnings = warnings;
     allRows = rows.filter((r) => {
       const absentNum = parseFloat(r.absent);

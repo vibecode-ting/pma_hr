@@ -5,7 +5,8 @@
  * date-aware checkout validation, and overtime detection.
  */
 
-import type { AttendanceRow, RulesConfig, ShiftConfig } from './types';
+import type { AttendanceRow, RulesConfig, ShiftConfig, FontMode } from './types';
+export type { FontMode };
 
 // ─── Default Constants ─────────────────────────────────────────────────────────
 
@@ -13,15 +14,43 @@ export const GRACE_MINUTES = 10;
 export const EARLY_OUT_GRACE_MINUTES = 10;
 export const OT_THRESHOLD_MINUTES = 20;
 
-export const REMARK_LATE_SUFFIX = 'ခြင့္တိုင္ရန္';
-export const REMARK_NO_RECORD = '( Absent / 8 hours ခြင့္တိုင္ရန္ )';
-export const REMARK_LEAVE_APPLIED = 'ခြင့္တိုင္ၿပီး';
-export const REMARK_NO_CHECKOUT = 'အထြက္တိုင္းကဒ် မရွိပါ';
-export const REMARK_NO_CHECKIN = 'အဝင္တိုင္းကဒ် မရွိပါ';
-export const REMARK_OT_SUFFIX = 'အိုတီတင္ရန္';
-export const REMARK_OT_APPLIED = 'အိုတီတင္ပီး';
-export const REMARK_NIGHT_SHIFT = 'ညဆိုင္း';
-export const REMARK_COMBINE_JOIN = ' ႏွင့္ ';
+export const ZAWGYI_REMARKS = {
+  remarkLateSuffix: 'ခြင့္တိုင္ရန္',
+  remarkNoRecord: '( Absent / 8 hours ခြင့္တိုင္ရန္ )',
+  remarkLeaveApplied: 'ခြင့္တိုင္ၿပီး',
+  remarkNoCheckout: 'အထြက္တိုင္းကဒ် မရွိပါ',
+  remarkNoCheckin: 'အဝင္တိုင္းကဒ် မရွိပါ',
+  remarkOtSuffix: 'အိုတီတင္ရန္',
+  remarkOtApplied: 'အိုတီတင္ပီး',
+  remarkNightShift: 'ညဆိုင္း',
+  remarkCombineJoin: ' ႏွင့္ ',
+  minuteUnit: 'မိနစ္',
+  hourUnit: 'နာရီ',
+};
+
+export const UNICODE_REMARKS = {
+  remarkLateSuffix: 'ခွင့်တိုင်ရန်',
+  remarkNoRecord: '( Absent / 8 hours ခွင့်တိုင်ရန် )',
+  remarkLeaveApplied: 'ခွင့်တိုင်ပြီး',
+  remarkNoCheckout: 'အထွက်တိုင်းကဒ် မရှိပါ',
+  remarkNoCheckin: 'အဝင်တိုင်းကဒ် မရှိပါ',
+  remarkOtSuffix: 'အိုတီတင်ရန်',
+  remarkOtApplied: 'အိုတီတင်ပြီး',
+  remarkNightShift: 'ညဆိုင်း',
+  remarkCombineJoin: ' နှင့် ',
+  minuteUnit: 'မိနစ်',
+  hourUnit: 'နာရီ',
+};
+
+export const REMARK_LATE_SUFFIX = ZAWGYI_REMARKS.remarkLateSuffix;
+export const REMARK_NO_RECORD = ZAWGYI_REMARKS.remarkNoRecord;
+export const REMARK_LEAVE_APPLIED = ZAWGYI_REMARKS.remarkLeaveApplied;
+export const REMARK_NO_CHECKOUT = ZAWGYI_REMARKS.remarkNoCheckout;
+export const REMARK_NO_CHECKIN = ZAWGYI_REMARKS.remarkNoCheckin;
+export const REMARK_OT_SUFFIX = ZAWGYI_REMARKS.remarkOtSuffix;
+export const REMARK_OT_APPLIED = ZAWGYI_REMARKS.remarkOtApplied;
+export const REMARK_NIGHT_SHIFT = ZAWGYI_REMARKS.remarkNightShift;
+export const REMARK_COMBINE_JOIN = ZAWGYI_REMARKS.remarkCombineJoin;
 
 export const DEFAULT_SHIFTS: ShiftConfig[] = [
   { shiftNo: '5', shiftName: 'Kitchen,D2 Morning', startTime: '05:00', lunchTime: '09:00~10:00', endTime: '13:00', overtime: [{ work: '13:00~15:00' }, { rest: '15:00~15:30' }, { work: '15:30~16:30' }] },
@@ -122,11 +151,12 @@ export function computeWorkMinutes(
 /**
  * Format minutes into "၁၅ မိနစ် / 0.25 hour" format
  */
-export function formatLeaveTime(minutes: number): string {
+export function formatLeaveTime(minutes: number, fontMode: FontMode = 'zawgyi'): string {
   const toMyanmarNum = (n: number) => String(n).replace(/\d/g, (d) => '၀၁၂၃၄၅၆၇၈၉'[parseInt(d, 10)]);
   const mm = toMyanmarNum(minutes);
   const hrs = Number((minutes / 60).toFixed(4));
-  return `${mm} မိနစ္ / ${hrs} hour`;
+  const unit = fontMode === 'unicode' ? UNICODE_REMARKS.minuteUnit : ZAWGYI_REMARKS.minuteUnit;
+  return `${mm} ${unit} / ${hrs} hour`;
 }
 
 // ─── Shift Matching & Computation ─────────────────────────────────────────────
@@ -166,20 +196,68 @@ export function computeRemark(
   row: AttendanceRow,
   cfg?: Partial<RulesConfig>,
   todayStr: string = getTodayDateString(),
-  currentMinutes: number = getCurrentTimeMinutes()
+  currentMinutes: number = getCurrentTimeMinutes(),
+  fontMode: FontMode = 'zawgyi'
 ): string {
   const shifts = cfg?.shifts && cfg.shifts.length > 0 ? cfg.shifts : DEFAULT_SHIFTS;
   const graceMinutes = cfg?.graceMinutes ?? GRACE_MINUTES;
   const earlyOutGraceMinutes = cfg?.earlyOutGraceMinutes ?? EARLY_OUT_GRACE_MINUTES;
   const otThresholdMinutes = cfg?.otThresholdMinutes ?? OT_THRESHOLD_MINUTES;
-  const lateSuffix = cfg?.remarkLateSuffix ?? cfg?.remarkLate ?? REMARK_LATE_SUFFIX;
-  const leaveAppliedRemark = cfg?.remarkLeaveApplied ?? REMARK_LEAVE_APPLIED;
-  let otSuffix = cfg?.remarkOtSuffix ?? REMARK_OT_SUFFIX;
-  // Clean up any stray "hour" or "နာရီ" in otSuffix to prevent "1 နာရီ hour အိုတီတင်ရန်"
-  otSuffix = otSuffix.replace(/hour\s*/gi, '').replace(/နာရီ\s*/gi, '').trim() || REMARK_OT_SUFFIX;
-  const otAppliedRemark = cfg?.remarkOtApplied ?? REMARK_OT_APPLIED;
-  const noCheckoutRemark = cfg?.remarkNoCheckout || REMARK_NO_CHECKOUT;
-  const noCheckinRemark = cfg?.remarkNoCheckin || REMARK_NO_CHECKIN;
+
+  const defs = fontMode === 'unicode' ? UNICODE_REMARKS : ZAWGYI_REMARKS;
+
+  let lateSuffix = cfg?.remarkLateSuffix ?? cfg?.remarkLate ?? defs.remarkLateSuffix;
+  if (fontMode === 'zawgyi' && (lateSuffix === UNICODE_REMARKS.remarkLateSuffix || lateSuffix === 'ခွင့်တိုင်ရန်')) {
+    lateSuffix = ZAWGYI_REMARKS.remarkLateSuffix;
+  } else if (fontMode === 'unicode' && (lateSuffix === ZAWGYI_REMARKS.remarkLateSuffix || lateSuffix === 'ခြင့္တိုင္ရန္')) {
+    lateSuffix = UNICODE_REMARKS.remarkLateSuffix;
+  }
+
+  let leaveAppliedRemark = cfg?.remarkLeaveApplied ?? defs.remarkLeaveApplied;
+  if (fontMode === 'zawgyi' && (leaveAppliedRemark === UNICODE_REMARKS.remarkLeaveApplied || leaveAppliedRemark === 'ခွင့်တိုင်ပြီး')) {
+    leaveAppliedRemark = ZAWGYI_REMARKS.remarkLeaveApplied;
+  } else if (fontMode === 'unicode' && (leaveAppliedRemark === ZAWGYI_REMARKS.remarkLeaveApplied || leaveAppliedRemark === 'ခြင့္တိုင္ၿပီး')) {
+    leaveAppliedRemark = UNICODE_REMARKS.remarkLeaveApplied;
+  }
+
+  let otSuffix = cfg?.remarkOtSuffix ?? defs.remarkOtSuffix;
+  otSuffix = otSuffix.replace(/hour\s*/gi, '').replace(/နာရီ\s*/gi, '').trim() || defs.remarkOtSuffix;
+  if (fontMode === 'zawgyi' && (otSuffix === UNICODE_REMARKS.remarkOtSuffix || otSuffix === 'အိုတီတင်ရန်')) {
+    otSuffix = ZAWGYI_REMARKS.remarkOtSuffix;
+  } else if (fontMode === 'unicode' && (otSuffix === ZAWGYI_REMARKS.remarkOtSuffix || otSuffix === 'အိုတီတင္ရန္')) {
+    otSuffix = UNICODE_REMARKS.remarkOtSuffix;
+  }
+
+  let otAppliedRemark = cfg?.remarkOtApplied ?? defs.remarkOtApplied;
+  if (fontMode === 'zawgyi' && (otAppliedRemark === UNICODE_REMARKS.remarkOtApplied || otAppliedRemark === 'အိုတီတင်ပြီး' || otAppliedRemark === 'အိုတီတင်ပီး')) {
+    otAppliedRemark = ZAWGYI_REMARKS.remarkOtApplied;
+  } else if (fontMode === 'unicode' && (otAppliedRemark === ZAWGYI_REMARKS.remarkOtApplied || otAppliedRemark === 'အိုတီတင္ပီး' || otAppliedRemark === 'အိုတီတင္ပြီး')) {
+    otAppliedRemark = UNICODE_REMARKS.remarkOtApplied;
+  }
+
+  let noCheckoutRemark = cfg?.remarkNoCheckout || defs.remarkNoCheckout;
+  if (fontMode === 'zawgyi' && (noCheckoutRemark === UNICODE_REMARKS.remarkNoCheckout || noCheckoutRemark === 'အထွက်တိုင်းကဒ် မရှိပါ' || noCheckoutRemark === 'အထွက်တိုင်းကဒ်မရှိပါ')) {
+    noCheckoutRemark = ZAWGYI_REMARKS.remarkNoCheckout;
+  } else if (fontMode === 'unicode' && (noCheckoutRemark === ZAWGYI_REMARKS.remarkNoCheckout || noCheckoutRemark === 'အထြက္တိုင္းကဒ် မရွိပါ')) {
+    noCheckoutRemark = UNICODE_REMARKS.remarkNoCheckout;
+  }
+
+  let noCheckinRemark = cfg?.remarkNoCheckin || defs.remarkNoCheckin;
+  if (fontMode === 'zawgyi' && (noCheckinRemark === UNICODE_REMARKS.remarkNoCheckin || noCheckinRemark === 'အဝင်တိုင်းကဒ် မရှိပါ' || noCheckinRemark === 'အဝင်တိုင်းကဒ်မရှိပါ')) {
+    noCheckinRemark = ZAWGYI_REMARKS.remarkNoCheckin;
+  } else if (fontMode === 'unicode' && (noCheckinRemark === ZAWGYI_REMARKS.remarkNoCheckin || noCheckinRemark === 'အဝင္တိုင္းကဒ် မရွိပါ')) {
+    noCheckinRemark = UNICODE_REMARKS.remarkNoCheckin;
+  }
+
+  let nightShiftRemark = cfg?.remarkNightShift || defs.remarkNightShift;
+  if (fontMode === 'zawgyi' && (nightShiftRemark === UNICODE_REMARKS.remarkNightShift || nightShiftRemark === 'ညဆိုင်း')) {
+    nightShiftRemark = ZAWGYI_REMARKS.remarkNightShift;
+  } else if (fontMode === 'unicode' && (nightShiftRemark === ZAWGYI_REMARKS.remarkNightShift || nightShiftRemark === 'ညဆိုင္း')) {
+    nightShiftRemark = UNICODE_REMARKS.remarkNightShift;
+  }
+
+  const combineJoin = defs.remarkCombineJoin;
+  const hourUnit = defs.hourUnit;
 
   const shift = resolveShift(row.klass, shifts);
   const actPunches = extractPunches(row.actualTimeCard);
@@ -222,7 +300,6 @@ export function computeRemark(
     ['g', 'G', 'A', 'D', '12', '14', '16', '40'].includes(row.klass.trim()) ||
     startMin >= 16 * 60 // 16:00 (4:00 PM) or later
   );
-  const nightShiftRemark = cfg?.remarkNightShift || REMARK_NIGHT_SHIFT;
 
   // Check if attendance date is in the future or today before shift start time:
   const rowDate = normalizeDateDigits(row.attendanceDate);
@@ -403,7 +480,7 @@ export function computeRemark(
     const lateMinutes = inPunchMin - startMin;
     if (lateMinutes > graceMinutes) {
       const missedWorkMins = computeWorkMinutes(startMin, inPunchMin, lunch);
-      const timeStr = formatLeaveTime(missedWorkMins);
+      const timeStr = formatLeaveTime(missedWorkMins, fontMode);
       if (isAbsentZero()) {
         leaveRemark = `${timeStr} ${leaveAppliedRemark}`;
       } else {
@@ -425,7 +502,7 @@ export function computeRemark(
     const earlyMinutes = endMin - outPunchMin;
     if (earlyMinutes > earlyOutGraceMinutes) {
       const missedWorkMins = computeWorkMinutes(outPunchMin, endMin, lunch);
-      const timeStr = formatLeaveTime(missedWorkMins);
+      const timeStr = formatLeaveTime(missedWorkMins, fontMode);
       const earlyStr = isAbsentZero() ? `${timeStr} ${leaveAppliedRemark}` : `${timeStr} ${lateSuffix}`;
       checkoutRemark = earlyStr;
     }
@@ -489,15 +566,15 @@ export function computeRemark(
   const hasExistingOt = !isNaN(existingOt) && existingOt > 0;
 
   if (hasExistingOt) {
-    otRemark = `${existingOt} နာရီ ${otAppliedRemark}`;
+    otRemark = `${existingOt} ${hourUnit} ${otAppliedRemark}`;
   } else if (actualCardOt > 0) {
-    otRemark = `${actualCardOt} နာရီ ${otSuffix}`;
+    otRemark = `${actualCardOt} ${hourUnit} ${otSuffix}`;
   }
 
   // 5. Combinations of Remarks
   const parts = [checkinRemark, leaveRemark, checkoutRemark, otRemark].filter(Boolean);
   if (parts.length > 0) {
-    return `( ${parts.join(REMARK_COMBINE_JOIN)} )`;
+    return `( ${parts.join(combineJoin)} )`;
   }
   return '';
 }
@@ -565,11 +642,12 @@ export function applyRemarks(
   onWarn?: (msg: string) => void,
   cfg?: Partial<RulesConfig>,
   todayStr: string = getTodayDateString(),
-  currentMinutes: number = getCurrentTimeMinutes()
+  currentMinutes: number = getCurrentTimeMinutes(),
+  fontMode: FontMode = 'zawgyi'
 ): AttendanceRow[] {
   for (const row of rows) {
     try {
-      row.remarks = computeRemark(row, cfg, todayStr, currentMinutes);
+      row.remarks = computeRemark(row, cfg, todayStr, currentMinutes, fontMode);
     } catch (err) {
       row.remarks = '';
       const msg = `Row (Employee ID "${row.employeeId}", file "${row.sourceFile}"): remark error — ${

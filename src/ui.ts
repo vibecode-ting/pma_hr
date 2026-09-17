@@ -7,7 +7,7 @@
  */
 
 import { t } from './i18n';
-import type { AttendanceRow, ExportMode, LiveFilterState, Theme, RulesConfig, ResourceLink } from './types';
+import type { AttendanceRow, ExportMode, LiveFilterState, Theme, RulesConfig, ResourceLink, FontMode } from './types';
 import { exportPreviewSummary } from './export';
 import {
   REMARK_NO_RECORD,
@@ -493,7 +493,7 @@ function classifyRemark(remark: string): 'late' | 'no-record' | 'no-checkout' | 
  * Applied (ခြင့္တိုင္ၿပီး / အိုတီတင္ပီး) -> Green badge.
  * Required actions (ခြင့္တိုင္ရန္ / အိုတီတင္ရန္ / မရွိပါ) -> Red badge.
  */
-function renderRemarkCell(remark: string): HTMLTableCellElement {
+function renderRemarkCell(remark: string, fontMode: FontMode = 'zawgyi'): HTMLTableCellElement {
   const td = document.createElement('td');
   td.className = 'col-remark-cell';
 
@@ -505,19 +505,20 @@ function renderRemarkCell(remark: string): HTMLTableCellElement {
   }
 
   const badge = document.createElement('span');
+  const fontClass = fontMode === 'unicode' ? 'myanmar-unicode-font' : 'zawgyi-font';
 
-  if (remark.includes('ညဆိုင္း')) {
+  if (remark.includes('ညဆိုင္း') || remark.includes('ညဆိုင်း')) {
     badge.className = 'badge badge-night';
-    badge.innerHTML = `🌙 <span class="remark-text zawgyi-font">${remark}</span>`;
+    badge.innerHTML = `🌙 <span class="remark-text ${fontClass}">${remark}</span>`;
   } else if (isRemarkGreen(remark)) {
     badge.className = 'badge badge-green';
-    badge.innerHTML = `<span class="remark-icon">✓</span> <span class="remark-text zawgyi-font">${remark}</span>`;
+    badge.innerHTML = `<span class="remark-icon">✓</span> <span class="remark-text ${fontClass}">${remark}</span>`;
   } else if (isRemarkRed(remark)) {
     badge.className = 'badge badge-danger badge-red';
-    badge.innerHTML = `${icons.alertTriangle || '⚠'} <span class="remark-text zawgyi-font">${remark}</span>`;
+    badge.innerHTML = `${icons.alertTriangle || '⚠'} <span class="remark-text ${fontClass}">${remark}</span>`;
   } else {
     badge.className = 'badge badge-warning';
-    badge.innerHTML = `${icons.clockAlert || '⏰'} <span class="remark-text zawgyi-font">${remark}</span>`;
+    badge.innerHTML = `${icons.clockAlert || '⏰'} <span class="remark-text ${fontClass}">${remark}</span>`;
   }
 
   badge.title = remark;
@@ -532,7 +533,8 @@ function renderRemarkCell(remark: string): HTMLTableCellElement {
 export function buildPreviewTable(
   rows: AttendanceRow[],
   rulesConfig?: RulesConfig,
-  onOpenClassConfig?: (classId: string) => void
+  onOpenClassConfig?: (classId: string) => void,
+  fontMode: FontMode = 'zawgyi'
 ): HTMLElement {
   let sortKey: string | null = null;
   let sortAsc = true;
@@ -551,7 +553,7 @@ export function buildPreviewTable(
 
   const isGridEnabled = localStorage.getItem('hr_portal_table_grid') !== 'false';
   const table = document.createElement('table');
-  table.className = `preview-table live-preview-table${isGridEnabled ? ' grid-enabled' : ''}`;
+  table.className = `preview-table live-preview-table${isGridEnabled ? ' grid-enabled' : ''} font-mode-${fontMode}`;
   table.setAttribute('aria-label', t('preview.heading'));
 
   // Header
@@ -680,7 +682,7 @@ export function buildPreviewTable(
 
       for (const col of COLUMN_DEFS) {
         if (col.key === 'remarks') {
-          tr.appendChild(renderRemarkCell(row.remarks));
+          tr.appendChild(renderRemarkCell(row.remarks, fontMode));
         } else if (col.key === 'overtimeHours') {
           const td = document.createElement('td');
           td.className = 'col-numeric zawgyi-font';
@@ -799,7 +801,9 @@ export function buildLivePreviewSection(
     onDownload?: (btn: HTMLButtonElement) => void;
     onExportVisible?: (rows: AttendanceRow[]) => void;
     onOpenClassConfig?: (classId: string) => void;
-  }
+    onFontModeChange?: (fontMode: FontMode) => void;
+  },
+  initialFontMode: FontMode = 'zawgyi'
 ): HTMLElement {
   const container = document.createElement('div');
   container.className = 'live-preview-container';
@@ -1046,18 +1050,21 @@ export function buildLivePreviewSection(
   remSelect.id = 'filter-remarks-select';
   remSelect.className = 'filter-select';
 
+  let currentFontMode: FontMode = initialFontMode;
+
+  const isZawgyi = currentFontMode === 'zawgyi';
   const remChoices: Array<{ value: string; label: string }> = [
     { value: '', label: t('settings.filterAllRemarks') || '— All Remarks —' },
     { value: '__HAS_REMARK__', label: t('filter.withRemarks') || 'With Remarks' },
     { value: '__NO_REMARK__', label: t('filter.noRemarks') || 'No Remarks' },
-    { value: rulesConfig.remarkNightShift, label: rulesConfig.remarkNightShift + ' (Night Shift)' },
-    { value: rulesConfig.remarkLateSuffix, label: rulesConfig.remarkLateSuffix + ' (Late/Leave Needed)' },
-    { value: rulesConfig.remarkLeaveApplied || 'ခွင့်တိုင်ပြီး', label: (rulesConfig.remarkLeaveApplied || 'ခွင့်တိုင်ပြီး') + ' (Leave Applied)' },
-    { value: rulesConfig.remarkOtSuffix, label: rulesConfig.remarkOtSuffix + ' (OT Needed)' },
-    { value: rulesConfig.remarkOtApplied || 'အိုတီတင်ပီး', label: (rulesConfig.remarkOtApplied || 'အိုတီတင်ပီး') + ' (OT Applied)' },
-    { value: rulesConfig.remarkNoCheckout, label: rulesConfig.remarkNoCheckout + ' (No Checkout)' },
-    { value: rulesConfig.remarkNoCheckin, label: rulesConfig.remarkNoCheckin + ' (No Checkin)' },
-    { value: rulesConfig.remarkNoRecord, label: rulesConfig.remarkNoRecord + ' (No Record/Absent)' },
+    { value: 'NIGHT', label: (isZawgyi ? 'ညဆိုင္း' : 'ညဆိုင်း') + ' (Night Shift)' },
+    { value: 'LATE', label: (isZawgyi ? 'ခြင့္တိုင္ရန္' : 'ခွင့်တိုင်ရန်') + ' (Late/Leave Needed)' },
+    { value: 'LEAVE_APPLIED', label: (isZawgyi ? 'ခြင့္တိုင္ၿပီး' : 'ခွင့်တိုင်ပြီး') + ' (Leave Applied)' },
+    { value: 'OT', label: (isZawgyi ? 'အိုတီတင္ရန္' : 'အိုတီတင်ရန်') + ' (OT Needed)' },
+    { value: 'OT_APPLIED', label: (isZawgyi ? 'အိုတီတင္ပီး' : 'အိုတီတင်ပြီး') + ' (OT Applied)' },
+    { value: 'NO_CHECKOUT', label: (isZawgyi ? 'အထြက္တိုင္းကဒ် မရွိပါ' : 'အထွက်တိုင်းကဒ် မရှိပါ') + ' (No Checkout)' },
+    { value: 'NO_CHECKIN', label: (isZawgyi ? 'အဝင္တိုင္းကဒ် မရွိပါ' : 'အဝင်တိုင်းကဒ် မရှိပါ') + ' (No Checkin)' },
+    { value: 'ABSENT', label: '( Absent / 8 hours )' },
   ];
 
   for (const c of remChoices) {
@@ -1078,17 +1085,40 @@ export function buildLivePreviewSection(
   // Summary bar above the table showing total and filtered counts
   const summaryBar = document.createElement('div');
   summaryBar.className = 'live-table-summary-bar';
-  
+
+  const actionsWrap = document.createElement('div');
+  actionsWrap.className = 'live-table-actions';
+  actionsWrap.style.cssText = 'display: flex; align-items: center; gap: 8px; margin-left: auto;';
+
+  const fontToggleBtn = document.createElement('button');
+  fontToggleBtn.type = 'button';
+  fontToggleBtn.className = 'btn btn-secondary btn-sm font-toggle-btn';
+  const updateFontToggleBtn = () => {
+    const isZ = currentFontMode === 'zawgyi';
+    fontToggleBtn.innerHTML = `🔤 <span class="font-mode-label">Font: <strong>${isZ ? 'Zawgyi' : 'Unicode'}</strong></span>`;
+    fontToggleBtn.title = isZ ? 'Currently Zawgyi. Click to switch to Unicode' : 'Currently Unicode. Click to switch to Zawgyi';
+  };
+  updateFontToggleBtn();
+
+  fontToggleBtn.addEventListener('click', () => {
+    currentFontMode = currentFontMode === 'zawgyi' ? 'unicode' : 'zawgyi';
+    localStorage.setItem('hr_portal_font_mode', currentFontMode);
+    updateFontToggleBtn();
+    callbacks?.onFontModeChange?.(currentFontMode);
+  });
+
   const exportBtn = document.createElement('button');
   exportBtn.type = 'button';
   exportBtn.className = 'btn btn-secondary btn-sm';
   exportBtn.innerHTML = `📥 <span data-i18n="preview.exportVisible">${t('preview.exportVisible') || 'Export to Excel'}</span>`;
-  exportBtn.style.cssText = 'margin-left: auto;';
   exportBtn.addEventListener('click', () => {
     callbacks?.onExportVisible?.(currentFilteredRows);
   });
-  summaryBar.appendChild(exportBtn);
-  
+
+  actionsWrap.appendChild(fontToggleBtn);
+  actionsWrap.appendChild(exportBtn);
+  summaryBar.appendChild(actionsWrap);
+
   container.appendChild(summaryBar);
 
   // Table wrapper container
@@ -1232,6 +1262,22 @@ export function buildLivePreviewSection(
           if (!r.remarks || r.remarks.trim() === '') return false;
         } else if (current.remarks === '__NO_REMARK__') {
           if (r.remarks && r.remarks.trim() !== '') return false;
+        } else if (current.remarks === 'NIGHT') {
+          if (!r.remarks.includes('ညဆိုင္း') && !r.remarks.includes('ညဆိုင်း')) return false;
+        } else if (current.remarks === 'LATE') {
+          if (!r.remarks.includes('တိုင္ရန္') && !r.remarks.includes('တိုင်ရန်')) return false;
+        } else if (current.remarks === 'LEAVE_APPLIED') {
+          if (!r.remarks.includes('တိုင္ၿပီး') && !r.remarks.includes('တိုင်ပြီး')) return false;
+        } else if (current.remarks === 'OT') {
+          if (!r.remarks.includes('အိုတီတင္ရန္') && !r.remarks.includes('အိုတီတင်ရန်')) return false;
+        } else if (current.remarks === 'OT_APPLIED') {
+          if (!r.remarks.includes('အိုတီတင္ပီး') && !r.remarks.includes('အိုတီတင္ပြီး') && !r.remarks.includes('အိုတီတင်ပြီး') && !r.remarks.includes('အိုတီတင်ပီး')) return false;
+        } else if (current.remarks === 'NO_CHECKOUT') {
+          if (!r.remarks.includes('အထြက္') && !r.remarks.includes('အထွက်')) return false;
+        } else if (current.remarks === 'NO_CHECKIN') {
+          if (!r.remarks.includes('အဝင္') && !r.remarks.includes('အဝင်')) return false;
+        } else if (current.remarks === 'ABSENT') {
+          if (!r.remarks.includes('Absent') && !r.remarks.includes('absent')) return false;
         } else if (!r.remarks.includes(current.remarks)) {
           return false;
         }
@@ -1260,7 +1306,7 @@ export function buildLivePreviewSection(
       </div>
     `;
     currentFilteredRows = filtered;
-    summaryBar.appendChild(exportBtn);
+    summaryBar.appendChild(actionsWrap);
 
     // Update row count badge in filter panel header
     if (!hasActiveFilter && isHideResolved) {
@@ -1276,7 +1322,7 @@ export function buildLivePreviewSection(
 
     // Render table with filtered rows
     tableHolder.innerHTML = '';
-    tableHolder.appendChild(buildPreviewTable(filtered, rulesConfig, callbacks?.onOpenClassConfig));
+    tableHolder.appendChild(buildPreviewTable(filtered, rulesConfig, callbacks?.onOpenClassConfig, currentFontMode));
 
     onFilterChange(current);
   };

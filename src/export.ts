@@ -12,7 +12,7 @@
 
 import * as XLSX from 'xlsx';
 import JSZip from 'jszip';
-import type { AttendanceRow, ExportMode } from './types';
+import type { AttendanceRow, ExportMode, FontMode } from './types';
 
 /** Output column order — must match the spec in plan.md exactly */
 const OUTPUT_HEADERS = [
@@ -67,7 +67,7 @@ function rowsToAoa(rows: AttendanceRow[]): (string | number)[][] {
  * Build a single-sheet XLSX WorkBook from an array of AttendanceRows.
  * Includes: frozen header row, autofilter, reasonable column widths.
  */
-export function buildWorkbook(rows: AttendanceRow[]): XLSX.WorkBook {
+export function buildWorkbook(rows: AttendanceRow[], fontMode: FontMode = 'zawgyi'): XLSX.WorkBook {
   const aoa = rowsToAoa(rows);
   const ws = XLSX.utils.aoa_to_sheet(aoa);
 
@@ -87,16 +87,14 @@ export function buildWorkbook(rows: AttendanceRow[]): XLSX.WorkBook {
   // Column widths
   ws['!cols'] = OUTPUT_HEADERS.map((h) => ({ wch: COLUMN_WIDTHS[h] ?? 16 }));
 
-  // Apply fonts: Zawgyi-One for raw XLS data (Name etc.), Myanmar Text (Unicode) for generated Remarks (col 9)
-  const REMARKS_COL = 9; // 0-based index of Remarks column
+  // Apply fonts: Myanmar Text for Unicode mode, Zawgyi-One for Zawgyi mode
+  const fontName = fontMode === 'unicode' ? 'Myanmar Text' : 'Zawgyi-One';
   const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
   for (let R = range.s.r; R <= range.e.r; ++R) {
     for (let C = range.s.c; C <= range.e.c; ++C) {
       const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
       if (!ws[cellAddress]) continue;
       const isHeader = R === 0;
-      // All columns use Zawgyi-One (remark text is Zawgyi-encoded)
-      const fontName = 'Zawgyi-One';
       ws[cellAddress].s = {
         font: {
           name: fontName,
@@ -160,7 +158,8 @@ export async function exportSelection(
   rows: AttendanceRow[],
   selectedGroups: Set<string>,
   mode: ExportMode,
-  onProgress?: (msg: string) => void
+  onProgress?: (msg: string) => void,
+  fontMode: FontMode = 'zawgyi'
 ): Promise<void> {
   const log = (msg: string) => onProgress?.(msg);
 
@@ -172,13 +171,13 @@ export async function exportSelection(
       const groupRows = rows.filter((r) => r.groupCode === groupCode);
       if (groupRows.length === 0) continue;
       const groupName = sanitize(groupRows[0].groupName || groupCode);
-      const wb = buildWorkbook(groupRows);
+      const wb = buildWorkbook(groupRows, fontMode);
       workbooks.push({ wb, filename: `attendance_${sanitize(groupCode)}_${groupName}.xlsx` });
     }
   } else if (mode === 'combined') {
     // One workbook for all selected group codes combined
     const filteredRows = rows.filter((r) => selectedGroups.has(r.groupCode));
-    const wb = buildWorkbook(filteredRows);
+    const wb = buildWorkbook(filteredRows, fontMode);
     workbooks.push({ wb, filename: 'attendance_combined.xlsx' });
   } else if (mode === 'per-source-file') {
     // One workbook per source file — ignore group selection
@@ -186,7 +185,7 @@ export async function exportSelection(
     for (const sourceFile of sourceFiles) {
       const fileRows = rows.filter((r) => r.sourceFile === sourceFile);
       const baseName = sourceFile.replace(/\.[^.]+$/, ''); // strip extension
-      const wb = buildWorkbook(fileRows);
+      const wb = buildWorkbook(fileRows, fontMode);
       workbooks.push({ wb, filename: `attendance_${sanitize(baseName)}.xlsx` });
     }
   }
@@ -240,7 +239,11 @@ export function exportPreviewSummary(
 /**
  * Export visible rows from Live View directly to an Excel file.
  */
-export function exportVisibleRows(rows: AttendanceRow[], filename = 'attendance_live_view.xlsx'): void {
-  const wb = buildWorkbook(rows);
+export function exportVisibleRows(
+  rows: AttendanceRow[],
+  filename = 'attendance_live_view.xlsx',
+  fontMode: FontMode = 'zawgyi'
+): void {
+  const wb = buildWorkbook(rows, fontMode);
   downloadWorkbook(wb, filename);
 }
