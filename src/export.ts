@@ -13,6 +13,7 @@
 import * as XLSX from 'xlsx';
 import JSZip from 'jszip';
 import type { AttendanceRow, ExportMode, FontMode } from './types';
+import { zg2uni } from './rabbit';
 
 /** Output column order — must match the spec in plan.md exactly */
 const OUTPUT_HEADERS = [
@@ -46,13 +47,13 @@ const COLUMN_WIDTHS: Record<string, number> = {
  * Convert an array of AttendanceRows to a 2D array for SheetJS,
  * in the exact output order.
  */
-function rowsToAoa(rows: AttendanceRow[]): (string | number)[][] {
+function rowsToAoa(rows: AttendanceRow[], fontMode: FontMode = 'zawgyi'): (string | number)[][] {
   const header: string[] = [...OUTPUT_HEADERS];
   const dataRows = rows.map((r) => [
     r.employeeId,
-    r.name,
+    fontMode === 'unicode' ? zg2uni(r.name) : r.name,
     r.groupCode,
-    r.groupName,
+    fontMode === 'unicode' ? zg2uni(r.groupName) : r.groupName,
     r.attendanceDate,
     r.actualTimeCard,
     r.absent,
@@ -68,11 +69,11 @@ function rowsToAoa(rows: AttendanceRow[]): (string | number)[][] {
  * Includes: frozen header row, autofilter, reasonable column widths.
  */
 export function buildWorkbook(rows: AttendanceRow[], fontMode: FontMode = 'zawgyi'): XLSX.WorkBook {
-  const aoa = rowsToAoa(rows);
+  const aoa = rowsToAoa(rows, fontMode);
   const ws = XLSX.utils.aoa_to_sheet(aoa);
 
   // Freeze the header row
-  ws['!freeze'] = { xSplit: 0, ySplit: 1, topLeftCell: 'A2', activePane: 'bottomLeft' };
+  ws['!views'] = [{ state: 'frozen', ySplit: 1, topLeftCell: 'A2' }];
 
   // AutoFilter over the entire used range
   const totalCols = OUTPUT_HEADERS.length;
@@ -87,28 +88,6 @@ export function buildWorkbook(rows: AttendanceRow[], fontMode: FontMode = 'zawgy
   // Column widths
   ws['!cols'] = OUTPUT_HEADERS.map((h) => ({ wch: COLUMN_WIDTHS[h] ?? 16 }));
 
-  // Apply fonts: Myanmar Text for Unicode mode, Zawgyi-One for Zawgyi mode
-  const fontName = fontMode === 'unicode' ? 'Myanmar Text' : 'Zawgyi-One';
-  const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
-  for (let R = range.s.r; R <= range.e.r; ++R) {
-    for (let C = range.s.c; C <= range.e.c; ++C) {
-      const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
-      if (!ws[cellAddress]) continue;
-      const isHeader = R === 0;
-      ws[cellAddress].s = {
-        font: {
-          name: fontName,
-          sz: isHeader ? 11 : 10,
-          bold: isHeader,
-        },
-        alignment: {
-          vertical: 'center',
-          horizontal: isHeader ? 'center' : (C === 6 || C === 7 ? 'right' : 'left'),
-        },
-      };
-    }
-  }
-
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Attendance');
   return wb;
@@ -118,11 +97,7 @@ export function buildWorkbook(rows: AttendanceRow[], fontMode: FontMode = 'zawgy
  * Trigger a browser download of a WorkBook as an .xlsx file.
  */
 export function downloadWorkbook(wb: XLSX.WorkBook, filename: string): void {
-  const wbArrayBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array', cellStyles: true });
-  const blob = new Blob([wbArrayBuffer], {
-    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  });
-  triggerDownload(blob, filename);
+  XLSX.writeFile(wb, filename);
 }
 
 /**
@@ -206,7 +181,7 @@ export async function exportSelection(
   log(`Building ZIP with ${workbooks.length} files…`);
   const zip = new JSZip();
   for (const { wb, filename } of workbooks) {
-    const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array', cellStyles: true });
+    const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
     zip.file(filename, buf);
   }
   const zipBlob = await zip.generateAsync({ type: 'blob' });

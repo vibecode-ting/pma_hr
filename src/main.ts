@@ -187,6 +187,26 @@ async function loadRulesConfig(): Promise<void> {
       rulesConfig = { ...rulesConfig, ...parsed };
     } catch { /* ignore */ }
   }
+
+  // Ensure remark configurations default to Zawgyi if they were stored in Unicode
+  const zgRemMap: Record<string, string> = {
+    'ခွင့်တိုင်ရန်': 'ခြင့္တိုင္ရန္',
+    'ခွင့်တိုင်ပြီး': 'ခြင့္တိုင္ၿပီး',
+    'အိုတီတင်ရန်': 'အိုတီတင္ရန္',
+    'hour အိုတီတင်ရန်': 'အိုတီတင္ရန္',
+    'အိုတီတင်ပြီး': 'အိုတီတင္ပီး',
+    'အိုတီတင်ပီး': 'အိုတီတင္ပီး',
+    'အထွက်တိုင်းကဒ် မရှိပါ': 'အထြက္တိုင္းကဒ် မရွိပါ',
+    'အဝင်တိုင်းကဒ် မရှိပါ': 'အဝင္တိုင္းကဒ် မရွိပါ',
+    'ညဆိုင်း': 'ညဆိုင္း',
+    '( 8 နာရီ ခွင့်တိုင်ရန် )': '( Absent / 8 hours ခြင့္တိုင္ရန္ )',
+  };
+  for (const k of ['remarkLateSuffix', 'remarkLeaveApplied', 'remarkOtSuffix', 'remarkOtApplied', 'remarkNoCheckout', 'remarkNoCheckin', 'remarkNightShift', 'remarkNoRecord'] as const) {
+    const val = (rulesConfig as any)[k];
+    if (typeof val === 'string' && zgRemMap[val.trim()]) {
+      (rulesConfig as any)[k] = zgRemMap[val.trim()];
+    }
+  }
 }
 
 // ─── Login page ───────────────────────────────────────────────────────────────
@@ -402,6 +422,7 @@ function renderApp(container: HTMLElement): void {
       const exportRows = activeFilter.hideResolved !== false
         ? allRows.filter((r) => !isRowResolved(r))
         : allRows;
+      applyRemarks(exportRows, undefined, rulesConfig, undefined, undefined, fontMode);
       await exportSelection(exportRows, selectedGroups, exportMode, (msg) => showToast(msg, 'info'), fontMode);
       showToast(t('export.generate') + ' ✅', 'success');
     } catch (e) { showToast(String(e), 'error'); }
@@ -1157,10 +1178,10 @@ function renderApp(container: HTMLElement): void {
     grid.appendChild(field('graceMinutes', 'rule-grace', t('settings.rulesGrace') || 'Check-in Grace (Minutes)', 'number'));
     grid.appendChild(field('earlyOutGraceMinutes', 'rule-early-grace', t('settings.rulesEarlyGrace') || 'Early Out Grace (Minutes)', 'number'));
     grid.appendChild(field('otThresholdMinutes', 'rule-ot-threshold', t('settings.rulesOtThreshold') || 'OT Threshold (Minutes past end)', 'number'));
-    grid.appendChild(field('remarkLateSuffix', 'rule-late', t('settings.rulesLateLabel') || 'Leave Needed Suffix (ခွင့်တိုင်ရန်)'));
-    grid.appendChild(field('remarkLeaveApplied', 'rule-leave-applied', t('settings.rulesLeaveApplied') || 'Leave Done Suffix (ခွင့်တိုင်ပြီး)'));
-    grid.appendChild(field('remarkOtSuffix', 'rule-ot-suffix', t('settings.rulesOtSuffix') || 'OT Needed Suffix (အိုတီတင်ရန်)'));
-    grid.appendChild(field('remarkOtApplied', 'rule-ot-applied', t('settings.rulesOtApplied') || 'OT Done Suffix (အိုတီတင်ပြီး)'));
+    grid.appendChild(field('remarkLateSuffix', 'rule-late', t('settings.rulesLateLabel') || 'Leave Needed Suffix (ခြင့္တိုင္ရန္)'));
+    grid.appendChild(field('remarkLeaveApplied', 'rule-leave-applied', t('settings.rulesLeaveApplied') || 'Leave Done Suffix (ခြင့္တိုင္ၿပီး)'));
+    grid.appendChild(field('remarkOtSuffix', 'rule-ot-suffix', t('settings.rulesOtSuffix') || 'OT Needed Suffix (အိုတီတင္ရန္)'));
+    grid.appendChild(field('remarkOtApplied', 'rule-ot-applied', t('settings.rulesOtApplied') || 'OT Done Suffix (အိုတီတင္ပီး)'));
     grid.appendChild(field('remarkNoRecord', 'rule-no-record', t('settings.rulesNoRecord') || 'No Record Remark'));
     grid.appendChild(field('remarkNoCheckout', 'rule-no-checkout', t('settings.rulesNoCheckout') || 'No Checkout Remark'));
     grid.appendChild(field('remarkNoCheckin', 'rule-no-checkin', t('settings.rulesNoCheckin') || 'No Checkin Remark'));
@@ -1400,9 +1421,9 @@ function renderApp(container: HTMLElement): void {
       if (inputs.otThresholdMinutes) inputs.otThresholdMinutes.value = String(rulesConfig.otThresholdMinutes);
       if (inputs.remarkLateSuffix) inputs.remarkLateSuffix.value = rulesConfig.remarkLateSuffix;
       if (inputs.remarkNoRecord) inputs.remarkNoRecord.value = rulesConfig.remarkNoRecord;
-      if (inputs.remarkLeaveApplied) inputs.remarkLeaveApplied.value = rulesConfig.remarkLeaveApplied ?? 'ခွင့်တိုင်ပြီး';
+      if (inputs.remarkLeaveApplied) inputs.remarkLeaveApplied.value = rulesConfig.remarkLeaveApplied ?? REMARK_LEAVE_APPLIED;
       if (inputs.remarkOtSuffix) inputs.remarkOtSuffix.value = rulesConfig.remarkOtSuffix;
-      if (inputs.remarkOtApplied) inputs.remarkOtApplied.value = rulesConfig.remarkOtApplied ?? 'အိုတီတင်ပီး';
+      if (inputs.remarkOtApplied) inputs.remarkOtApplied.value = rulesConfig.remarkOtApplied ?? REMARK_OT_APPLIED;
       if (inputs.remarkNoCheckout) inputs.remarkNoCheckout.value = rulesConfig.remarkNoCheckout;
       if (inputs.remarkNoCheckin) inputs.remarkNoCheckin.value = rulesConfig.remarkNoCheckin;
       if (inputs.remarkNightShift) inputs.remarkNightShift.value = rulesConfig.remarkNightShift;
@@ -1797,17 +1818,7 @@ function renderApp(container: HTMLElement): void {
     const callbacks = {
       onResetAll: resetAll,
       onDownload: async (btn: HTMLButtonElement) => {
-        btn.disabled = true;
-        btn.innerHTML = `<span class="spinner"></span><span data-i18n="export.generating">${t('export.generating')}</span>`;
-        try {
-          const exportRows = activeFilter.hideResolved !== false
-            ? allRows.filter((r) => !isRowResolved(r))
-            : allRows;
-          await exportSelection(exportRows, selectedGroups, exportMode, (msg) => showToast(msg, 'info'), fontMode);
-          showToast(t('export.generate') + ' ✅', 'success');
-        } catch (e) { showToast(String(e), 'error'); }
-        btn.disabled = false;
-        btn.innerHTML = `${icons.download} <span data-i18n="export.generate">${t('export.generate')}</span>`;
+        await doExport(btn);
       },
       onExportVisible: async (filteredRows: AttendanceRow[]) => {
         if (!filteredRows || filteredRows.length === 0) {
@@ -1815,6 +1826,7 @@ function renderApp(container: HTMLElement): void {
           return;
         }
         try {
+          applyRemarks(filteredRows, undefined, rulesConfig, undefined, undefined, fontMode);
           exportVisibleRows(filteredRows, 'attendance_live_view.xlsx', fontMode);
           showToast(t('export.generate') + ' ✅', 'success');
         } catch (e) {

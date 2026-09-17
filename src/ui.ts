@@ -9,6 +9,7 @@
 import { t } from './i18n';
 import type { AttendanceRow, ExportMode, LiveFilterState, Theme, RulesConfig, ResourceLink, FontMode } from './types';
 import { exportPreviewSummary } from './export';
+import { zg2uni } from './rabbit';
 import {
   REMARK_NO_RECORD,
   REMARK_NO_CHECKOUT,
@@ -769,9 +770,14 @@ export function buildPreviewTable(
           tr.appendChild(td);
         } else {
           const td = document.createElement('td');
-          const value = String(row[col.key] ?? '');
+          let value = String(row[col.key] ?? '');
+          if (fontMode === 'unicode' && (col.key === 'name' || col.key === 'groupName')) {
+            value = zg2uni(value);
+            td.className = 'myanmar-unicode-font';
+          } else {
+            td.className = 'zawgyi-font';
+          }
           td.textContent = value;
-          td.className = 'zawgyi-font';
           if (col.raw) td.classList.add('col-raw-data');
           if (col.numeric) td.classList.add('col-numeric');
           tr.appendChild(td);
