@@ -80,14 +80,14 @@
   --bg-inset:         #F8FAFC; /* Inputs, code blocks */
 
   --border-hairline:  #E2E8F0; /* Clean borders */
-  --border-gold:      #0284C7; /* Sky blue border accent */
+  --border-gold:      #0000FF; /* Pure blue border accent */
 
-  /* Yellow turned into Blue > sky and Dark blue gradients */
-  --gold-500:         #0284C7; /* Sky/Ocean Blue */
-  --gold-400:         #38BDF8; /* Sky 400 */
-  --gold-700:         #1E3A8A; /* Dark Blue 800 */
-  --gold-glow:        rgba(2, 132, 199, 0.25);
-  --btn-primary-gradient: linear-gradient(135deg, #0284C7 0%, #1E3A8A 100%);
+  /* All accents: Pure Blue */
+  --gold-500:         #0000FF; /* Pure Blue */
+  --gold-400:         #0000FF; /* Pure Blue */
+  --gold-700:         #0000FF; /* Pure Blue */
+  --gold-glow:        rgba(0, 0, 255, 0.25);
+  --btn-primary-gradient: linear-gradient(135deg, #0000FF 0%, #0000CC 100%);
 
   --text-primary:     #0F172A; /* High-contrast dark text */
   --text-secondary:   #475569; /* Slate secondary */
@@ -95,11 +95,11 @@
 
   --star-dim:         transparent; /* Hide dark starfield */
   --shadow-card:      0 4px 24px rgba(15, 23, 42, 0.08);
-  --shadow-gold:      0 0 24px rgba(2, 132, 199, 0.2);
+  --shadow-gold:      0 0 24px rgba(0, 0, 255, 0.2);
 
-  /* Pouchen | B150 HR-Portal & App Title: Both Dark Blue in Light theme */
-  --header-brand-color: #1E3A8A;
-  --app-title-color:    #1E3A8A;
+  /* Pouchen | B150 HR-Portal & App Title: Pure Blue in Light theme */
+  --header-brand-color: #0000FF;
+  --app-title-color:    #0000FF;
 }
 
 /* ── Language-specific font stacks ───────────────────────────────────────── */

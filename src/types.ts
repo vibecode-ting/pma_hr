@@ -124,6 +124,7 @@ export interface ShiftConfig {
   startTime: string;
   lunchTime: string;
   endTime: string;
+  overtime?: Array<{ work?: string; rest?: string }>;
 }
 
 /**

@@ -160,5 +160,9 @@
   "settings.shiftLunch": "午餐時間",
   "settings.shiftEnd": "下班時間",
   "settings.shiftAction": "操作",
+  "settings.shiftOvertime": "加班 (OT)",
+  "settings.rulesDesc": "在前或上傳後預先設定各班別工作時間、午餐扣除、寬限時間與緬文備註規則。",
+  "settings.addOvertimeBlock": "+ 新增加班區間",
+  "preview.exportVisible": "匯出至 Excel",
   "settings.filterAllRemarks": "— 所有備註 —"
 }

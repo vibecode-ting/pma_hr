@@ -160,5 +160,9 @@
   "settings.shiftLunch": "နေ့လည်စာချိန်",
   "settings.shiftEnd": "ဆင်းချိန်",
   "settings.shiftAction": "လုပ်ဆောင်ချက်",
+  "settings.shiftOvertime": "အချိန်ပို (OT)",
+  "settings.rulesDesc": "ဖိုင်မတင်မီ သို့မဟုတ် တင်ပြီးနောက် အလှည့်ချိန်များ၊ နေ့လည်စာချိန်နုတ်ယူမှု၊ အချိန်ဆိုင်းငံ့မှုနှင့် မြန်မာမှတ်ချက်စည်းမျဉ်းများကို ကြိုတင်ပြင်ဆင်ပါ",
+  "settings.addOvertimeBlock": "+ OT ကာလ ထပ်ထည့်ရန်",
+  "preview.exportVisible": "Excel သို့ ထုတ်ယူရန်",
   "settings.filterAllRemarks": "— မှတ်ချက်အားလုံး —"
 }

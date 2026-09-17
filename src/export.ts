@@ -95,8 +95,8 @@ export function buildWorkbook(rows: AttendanceRow[]): XLSX.WorkBook {
       const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
       if (!ws[cellAddress]) continue;
       const isHeader = R === 0;
-      // Remarks column uses Unicode Myanmar font; all others use Zawgyi-One
-      const fontName = (C === REMARKS_COL && !isHeader) ? 'Myanmar Text' : 'Zawgyi-One';
+      // All columns use Zawgyi-One (remark text is Zawgyi-encoded)
+      const fontName = 'Zawgyi-One';
       ws[cellAddress].s = {
         font: {
           name: fontName,
@@ -235,4 +235,12 @@ export function exportPreviewSummary(
     const sourceFiles = new Set(rows.map((r) => r.sourceFile));
     return { fileCount: sourceFiles.size, rowCount: rows.length };
   }
+}
+
+/**
+ * Export visible rows from Live View directly to an Excel file.
+ */
+export function exportVisibleRows(rows: AttendanceRow[], filename = 'attendance_live_view.xlsx'): void {
+  const wb = buildWorkbook(rows);
+  downloadWorkbook(wb, filename);
 }

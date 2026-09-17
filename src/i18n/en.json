@@ -160,5 +160,9 @@
   "settings.shiftLunch": "Lunch Time",
   "settings.shiftEnd": "Get Off Work",
   "settings.shiftAction": "Action",
+  "settings.shiftOvertime": "Overtime",
+  "settings.rulesDesc": "Pre-configure shift working hours, lunch break deductions, grace periods, and Myanmar remark rules before or after uploading.",
+  "settings.addOvertimeBlock": "+ Add Overtime Block",
+  "preview.exportVisible": "Export to Excel",
   "settings.filterAllRemarks": "— All Remarks —"
 }

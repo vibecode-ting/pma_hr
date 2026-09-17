@@ -24,25 +24,25 @@ export const REMARK_NIGHT_SHIFT = 'ညဆိုင္း';
 export const REMARK_COMBINE_JOIN = ' ႏွင့္ ';
 
 export const DEFAULT_SHIFTS: ShiftConfig[] = [
-  { shiftNo: '5', shiftName: 'Kitchen,D2 Morning', startTime: '05:00', lunchTime: '09:00~10:00', endTime: '13:00' },
-  { shiftNo: '8', shiftName: 'Security,Driver,Fire Morning', startTime: '06:30', lunchTime: '11:00~12:00', endTime: '14:30' },
-  { shiftNo: 'B', shiftName: 'Engineering Morning', startTime: '07:30', lunchTime: '12:00~13:00', endTime: '15:30' },
-  { shiftNo: '9', shiftName: 'Security,Driver,Fire Noon', startTime: '14:30', lunchTime: '18:30~19:30', endTime: '22:30' },
-  { shiftNo: 'C', shiftName: 'Engineering Noon', startTime: '15:30', lunchTime: '17:30~18:30', endTime: '23:30' },
-  { shiftNo: 'g', shiftName: 'D2 Night (Sat)', startTime: '17:00', lunchTime: '-', endTime: '21:00' },
-  { shiftNo: 'G', shiftName: 'D2 Night', startTime: '17:00', lunchTime: '21:00~22:00', endTime: '02:00' },
-  { shiftNo: 'A', shiftName: 'Security,Driver,Fire Night', startTime: '22:30', lunchTime: '02:00~03:00', endTime: '06:30' },
-  { shiftNo: 'D', shiftName: 'Engineering Night', startTime: '23:30', lunchTime: '02:00~03:00', endTime: '07:30' },
-  { shiftNo: 'p', shiftName: 'Kitchen-Noon, D2-Noon', startTime: '11:30', lunchTime: '15:00~16:00', endTime: '19:30' },
-  { shiftNo: '11', shiftName: 'AC (Morning)', startTime: '07:00', lunchTime: '12:00~13:00', endTime: '16:00' },
-  { shiftNo: '12', shiftName: 'AC (Night)', startTime: '19:00', lunchTime: '00:00~01:00', endTime: '04:00' },
-  { shiftNo: '13', shiftName: 'AC(Morning)(Sat)', startTime: '07:00', lunchTime: '-', endTime: '11:00' },
-  { shiftNo: '14', shiftName: 'AC(Night)(Sat)', startTime: '19:00', lunchTime: '-', endTime: '23:00' },
-  { shiftNo: 'a', shiftName: 'Clinic-Noon', startTime: '10:00', lunchTime: '14:00~15:00', endTime: '19:00' },
-  { shiftNo: '15', shiftName: 'Factory(Morning)', startTime: '07:00', lunchTime: '12:00~13:00', endTime: '16:00' },
-  { shiftNo: '17', shiftName: 'Factory(Morning)(Sat)', startTime: '07:00', lunchTime: '-', endTime: '11:00' },
-  { shiftNo: '16', shiftName: 'Factory(Night)', startTime: '19:00', lunchTime: '00:00~01:00', endTime: '04:00' },
-  { shiftNo: '40', shiftName: 'Factory(Night)(Sat)', startTime: '19:00', lunchTime: '-', endTime: '23:00' },
+  { shiftNo: '5', shiftName: 'Kitchen,D2 Morning', startTime: '05:00', lunchTime: '09:00~10:00', endTime: '13:00', overtime: [{ work: '13:00~15:00' }, { rest: '15:00~15:30' }, { work: '15:30~16:30' }] },
+  { shiftNo: 'B', shiftName: 'Security,Driver,Fire Morning', startTime: '06:30', lunchTime: '11:00~12:00', endTime: '14:30', overtime: [{ work: '14:30~17:00' }, { rest: '17:00~17:30' }, { work: '17:30~18:00' }] },
+  { shiftNo: '9', shiftName: 'Engineering Morning', startTime: '07:30', lunchTime: '12:00~13:00', endTime: '15:30', overtime: [{ work: '12:00~12:30' }, { rest: '12:30~13:00' }, { work: '13:00~14:30' }, { work: '15:30~18:00' }, { rest: '18:00~18:30' }, { work: '18:30~19:00' }] },
+  { shiftNo: 'C', shiftName: 'Security,Driver,Fire Noon', startTime: '14:30', lunchTime: '18:30~19:30', endTime: '22:30', overtime: [{ work: '13:30~15:30' }, { work: '22:30~00:30' }, { rest: '00:30~01:00' }, { work: '01:00~02:00' }] },
+  { shiftNo: '9', shiftName: 'Engineering Noon', startTime: '15:30', lunchTime: '17:30~18:30', endTime: '23:30', overtime: [{ rest: '23:30~00:00' }, { work: '00:00~03:00' }] },
+  { shiftNo: 'g', shiftName: 'D2 Night (Sat)', startTime: '17:00', lunchTime: '-', endTime: '21:00', overtime: [{ work: '15:30~17:00' }, { rest: '21:00~22:00' }, { work: '22:00~03:00' }] },
+  { shiftNo: 'G', shiftName: 'D2 Night', startTime: '17:00', lunchTime: '21:00~22:00', endTime: '02:00', overtime: [{ work: '14:30~15:00' }, { rest: '15:00~15:30' }, { work: '21:00~22:30' }, { work: '02:00~03:00' }, { rest: '03:00~03:30' }, { work: '03:30~05:30' }] },
+  { shiftNo: 'A', shiftName: 'Security,Driver,Fire Night', startTime: '22:30', lunchTime: '02:00~03:00', endTime: '06:30', overtime: [{ work: '20:00~20:30' }, { rest: '20:30~21:00' }, { work: '21:30~23:30' }, { work: '06:30~08:00' }, { rest: '08:00~08:30' }, { work: '08:30~10:00' }] },
+  { shiftNo: 'D', shiftName: 'Engineering Night', startTime: '23:30', lunchTime: '02:00~03:00', endTime: '07:30', overtime: [{ work: '07:30~08:00' }, { rest: '08:00~08:30' }, { work: '08:30~11:00' }] },
+  { shiftNo: 'p', shiftName: 'Kitchen-Noon, D2-Noon', startTime: '11:30', lunchTime: '15:00~16:00', endTime: '19:30', overtime: [{ work: '09:00~09:30' }, { rest: '09:30~10:00' }, { work: '10:00~11:30' }, { work: '19:30~21:00' }, { rest: '21:00~21:30' }, { work: '21:30~23:00' }] },
+  { shiftNo: '11', shiftName: 'AC (Morning)', startTime: '07:00', lunchTime: '12:00~13:00', endTime: '16:00', overtime: [{ work: '04:30~06:30' }, { rest: '06:30~07:00' }, { work: '16:00~18:00' }, { rest: '18:00~18:30' }, { work: '18:30~19:30' }] },
+  { shiftNo: '12', shiftName: 'AC (Night)', startTime: '19:00', lunchTime: '00:00~01:00', endTime: '04:00', overtime: [{ work: '04:00~06:00' }, { rest: '06:00~06:30' }, { work: '06:30~07:30' }] },
+  { shiftNo: '13', shiftName: 'AC(Morning)(Sat)', startTime: '07:00', lunchTime: '-', endTime: '11:00', overtime: [{ work: '04:30~06:30' }, { rest: '06:30~07:00' }, { work: '11:00~12:00' }, { rest: '12:00~13:00' }, { work: '13:00~17:00' }] },
+  { shiftNo: '14', shiftName: 'AC(Night)(Sat)', startTime: '19:00', lunchTime: '-', endTime: '23:00', overtime: [{ work: '23:00~00:00' }, { rest: '00:00~01:00' }, { work: '01:00~05:00' }] },
+  { shiftNo: 'a', shiftName: 'Clinic-Noon', startTime: '10:00', lunchTime: '14:00~15:00', endTime: '19:00', overtime: [{ work: '19:00~20:00' }, { rest: '20:00~21:00' }, { work: '21:00~23:00' }] },
+  { shiftNo: '15', shiftName: 'Factory(Morning)', startTime: '07:00', lunchTime: '12:00~13:00', endTime: '16:00', overtime: [{ work: '16:00~18:00' }, { rest: '18:00~18:30' }, { work: '18:30~19:30' }] },
+  { shiftNo: '17', shiftName: 'Factory(Morning)(Sat)', startTime: '07:00', lunchTime: '-', endTime: '11:00', overtime: [{ work: '11:00~12:00' }, { rest: '12:00~13:00' }, { work: '13:00~17:00' }] },
+  { shiftNo: '16', shiftName: 'Factory(Night)', startTime: '19:00', lunchTime: '00:00~01:00', endTime: '04:00', overtime: [{ work: '04:00~06:00' }, { rest: '06:00~06:30' }, { work: '06:30~07:30' }] },
+  { shiftNo: '40', shiftName: 'Factory(Night)(Sat)', startTime: '19:00', lunchTime: '-', endTime: '23:00', overtime: [{ work: '23:00~00:00' }, { rest: '00:00~01:00' }, { work: '01:00~05:00' }] },
 ];
 
 // ─── Time & Date Helpers ──────────────────────────────────────────────────────
@@ -432,21 +432,50 @@ export function computeRemark(
   }
 
   // 4. Overtime evaluation (pre-shift early arrival and post-shift late departure)
+  //    Uses shift.overtime[] work/rest periods to deduct rest breaks from OT hours
   let otRemark = '';
   let actualCardOt = 0;
+
+  // Helper: compute total rest minutes from shift overtime config within a time range
+  const computeOtRestMinutes = (fromMin: number, toMin: number): number => {
+    if (!shift || !shift.overtime || shift.overtime.length === 0) return 0;
+    let restMins = 0;
+    for (const block of shift.overtime) {
+      if (!block.rest) continue;
+      const parts = block.rest.split('~');
+      if (parts.length !== 2) continue;
+      let rStart = hhmmToMinutes(parts[0]);
+      let rEnd = hhmmToMinutes(parts[1]);
+      if (rStart === null || rEnd === null) continue;
+      rStart = adjustTime(rStart);
+      rEnd = adjustTime(rEnd);
+      if (rEnd <= rStart) rEnd += 1440;
+      // Overlap with [fromMin, toMin]
+      const overlapStart = Math.max(fromMin, rStart);
+      const overlapEnd = Math.min(toMin, rEnd);
+      if (overlapEnd > overlapStart) {
+        restMins += (overlapEnd - overlapStart);
+      }
+    }
+    return restMins;
+  };
 
   let preShiftCardOt = 0;
   if (inPunchMin !== null && inPunchMin < startMin) {
     const earlyMinutes = startMin - inPunchMin;
-    if (earlyMinutes >= otThresholdMinutes) {
-      preShiftCardOt = Math.floor((earlyMinutes + 10) / 30) * 0.5;
+    const restDeduction = computeOtRestMinutes(inPunchMin, startMin);
+    const effectiveMinutes = earlyMinutes - restDeduction;
+    if (effectiveMinutes >= otThresholdMinutes) {
+      preShiftCardOt = Math.floor((effectiveMinutes + 10) / 30) * 0.5;
     }
   }
 
   let postShiftCardOt = 0;
   if (outPunchMin !== null && outPunchMin > endMin) {
     let extraMinutes = outPunchMin - endMin;
-    if (isNoLunch && (endMin <= 11 * 60 && outPunchMin >= 12 * 60)) {
+    const restDeduction = computeOtRestMinutes(endMin, outPunchMin);
+    extraMinutes -= restDeduction;
+    if (isNoLunch && (endMin <= 11 * 60 && outPunchMin >= 12 * 60) && restDeduction === 0) {
       extraMinutes = Math.max(0, extraMinutes - 60);
     }
     if (extraMinutes >= otThresholdMinutes) {

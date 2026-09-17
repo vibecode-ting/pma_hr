@@ -508,16 +508,16 @@ function renderRemarkCell(remark: string): HTMLTableCellElement {
 
   if (remark.includes('ညဆိုင္း')) {
     badge.className = 'badge badge-night';
-    badge.innerHTML = `🌙 <span class="remark-text myanmar-unicode-font">${remark}</span>`;
+    badge.innerHTML = `🌙 <span class="remark-text zawgyi-font">${remark}</span>`;
   } else if (isRemarkGreen(remark)) {
     badge.className = 'badge badge-green';
-    badge.innerHTML = `<span class="remark-icon">✓</span> <span class="remark-text myanmar-unicode-font">${remark}</span>`;
+    badge.innerHTML = `<span class="remark-icon">✓</span> <span class="remark-text zawgyi-font">${remark}</span>`;
   } else if (isRemarkRed(remark)) {
     badge.className = 'badge badge-danger badge-red';
-    badge.innerHTML = `${icons.alertTriangle || '⚠'} <span class="remark-text myanmar-unicode-font">${remark}</span>`;
+    badge.innerHTML = `${icons.alertTriangle || '⚠'} <span class="remark-text zawgyi-font">${remark}</span>`;
   } else {
     badge.className = 'badge badge-warning';
-    badge.innerHTML = `${icons.clockAlert || '⏰'} <span class="remark-text myanmar-unicode-font">${remark}</span>`;
+    badge.innerHTML = `${icons.clockAlert || '⏰'} <span class="remark-text zawgyi-font">${remark}</span>`;
   }
 
   badge.title = remark;
@@ -530,6 +530,9 @@ function renderRemarkCell(remark: string): HTMLTableCellElement {
  * Includes sticky header, Excel-like vertical grid borders, and scrollable container.
  */
 export function buildPreviewTable(rows: AttendanceRow[]): HTMLElement {
+  let sortKey: string | null = null;
+  let sortAsc = true;
+  
   const wrapper = document.createElement('div');
   wrapper.className = 'preview-table-wrapper';
 
@@ -550,82 +553,172 @@ export function buildPreviewTable(rows: AttendanceRow[]): HTMLElement {
   // Header
   const thead = document.createElement('thead');
   const headerRow = document.createElement('tr');
+  const tbody = document.createElement('tbody');
+
+  const addResizeHandle = (th: HTMLTableCellElement) => {
+    const resizer = document.createElement('div');
+    resizer.className = 'th-resize-handle';
+    resizer.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const startX = e.pageX;
+        const startWidth = th.offsetWidth;
+        const onMove = (me: MouseEvent) => {
+            th.style.width = Math.max(40, startWidth + me.pageX - startX) + 'px';
+        };
+        const onUp = () => {
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+        };
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+    });
+    th.style.position = 'relative';
+    th.appendChild(resizer);
+  };
+  
+  const handleSort = (key: string) => {
+    if (sortKey === key) {
+      sortAsc = !sortAsc;
+    } else {
+      sortKey = key;
+      sortAsc = true;
+    }
+    
+    headerRow.querySelectorAll('.sort-indicator').forEach(span => span.textContent = '');
+    const th = headerRow.querySelector(`th[data-sort-key="${key}"]`);
+    if (th) {
+      const indicator = th.querySelector('.sort-indicator');
+      if (indicator) indicator.textContent = sortAsc ? ' ▲' : ' ▼';
+    }
+    
+    renderTbody();
+  };
 
   // Serial No column header "No"
   const thNo = document.createElement('th');
-  thNo.setAttribute('data-i18n', 'preview.colNo');
-  thNo.textContent = t('preview.colNo') || 'No';
+  thNo.setAttribute('data-sort-key', 'no');
   thNo.className = 'col-header-centered col-numeric col-serial-header';
-  thNo.style.cssText = 'width: 50px; min-width: 50px; text-align: center;';
+  thNo.style.cssText = 'width: 50px; min-width: 50px; text-align: center; cursor: pointer;';
+  
+  const noText = document.createElement('span');
+  noText.setAttribute('data-i18n', 'preview.colNo');
+  noText.textContent = t('preview.colNo') || 'No';
+  thNo.appendChild(noText);
+  
+  const noIndicator = document.createElement('span');
+  noIndicator.className = 'sort-indicator';
+  thNo.appendChild(noIndicator);
+  
+  thNo.addEventListener('click', () => handleSort('no'));
+  addResizeHandle(thNo);
   headerRow.appendChild(thNo);
 
   for (const col of COLUMN_DEFS) {
     const th = document.createElement('th');
-    th.setAttribute('data-i18n', col.i18nKey);
-    th.textContent = t(col.i18nKey);
+    th.setAttribute('data-sort-key', col.key);
     th.className = 'col-header-centered';
     if (col.numeric) th.classList.add('col-numeric');
+    th.style.cursor = 'pointer';
+    
+    const textSpan = document.createElement('span');
+    textSpan.setAttribute('data-i18n', col.i18nKey);
+    textSpan.textContent = t(col.i18nKey);
+    th.appendChild(textSpan);
+    
+    const indicator = document.createElement('span');
+    indicator.className = 'sort-indicator';
+    th.appendChild(indicator);
+    
+    th.addEventListener('click', () => handleSort(col.key));
+    addResizeHandle(th);
     headerRow.appendChild(th);
   }
   thead.appendChild(headerRow);
   table.appendChild(thead);
 
-  // Body: render all rows with 1-based serial index
-  const tbody = document.createElement('tbody');
-
-  rows.forEach((row, idx) => {
-    const tr = document.createElement('tr');
-
-    // Serial No cell: 1 to XX based on current view/filter
-    const tdNo = document.createElement('td');
-    tdNo.className = 'col-numeric col-serial-no zawgyi-font';
-    tdNo.style.cssText = 'text-align: center; font-weight: 600; color: var(--text-muted);';
-    tdNo.textContent = String(idx + 1);
-    tr.appendChild(tdNo);
-
-    for (const col of COLUMN_DEFS) {
-      if (col.key === 'remarks') {
-        tr.appendChild(renderRemarkCell(row.remarks));
-      } else if (col.key === 'overtimeHours') {
-        const td = document.createElement('td');
-        td.className = 'col-numeric zawgyi-font';
-        const otVal = parseFloat(row.overtimeHours || '0');
-        if (!isNaN(otVal) && otVal > 0) {
-          const badge = document.createElement('span');
-          badge.className = 'badge badge-ot';
-          badge.textContent = `${row.overtimeHours} hrs`;
-          td.appendChild(badge);
+  const renderTbody = () => {
+    tbody.innerHTML = '';
+    
+    let displayRows = [...rows].map((row, idx) => ({ row, idx }));
+    
+    if (sortKey) {
+      displayRows.sort((a, b) => {
+        let valA: string | number = '';
+        let valB: string | number = '';
+        if (sortKey === 'no') {
+          valA = a.idx;
+          valB = b.idx;
         } else {
-          td.textContent = row.overtimeHours || '0';
-          td.style.color = 'var(--text-muted)';
+          valA = a.row[sortKey as keyof AttendanceRow] || '';
+          valB = b.row[sortKey as keyof AttendanceRow] || '';
         }
-        tr.appendChild(td);
-      } else if (col.key === 'absent') {
-        const td = document.createElement('td');
-        td.className = 'col-numeric zawgyi-font';
-        const abVal = parseFloat(row.absent || '0');
-        if (!isNaN(abVal) && abVal > 0) {
-          const badge = document.createElement('span');
-          badge.className = 'badge badge-absent';
-          badge.textContent = `${row.absent} hrs`;
-          td.appendChild(badge);
+        
+        if (sortKey === 'absent' || sortKey === 'overtimeHours' || sortKey === 'no') {
+          valA = parseFloat(valA as string) || 0;
+          valB = parseFloat(valB as string) || 0;
+          return sortAsc ? valA - valB : valB - valA;
         } else {
-          td.textContent = row.absent || '0';
+          return sortAsc ? String(valA).localeCompare(String(valB)) : String(valB).localeCompare(String(valA));
         }
-        tr.appendChild(td);
-      } else {
-        const td = document.createElement('td');
-        const value = String(row[col.key] ?? '');
-        td.textContent = value;
-        td.className = 'zawgyi-font';
-        if (col.raw) td.classList.add('col-raw-data');
-        if (col.numeric) td.classList.add('col-numeric');
-        tr.appendChild(td);
-      }
+      });
     }
-    tbody.appendChild(tr);
-  });
 
+    displayRows.forEach(({ row, idx }) => {
+      const tr = document.createElement('tr');
+
+      // Serial No cell: 1 to XX based on current view/filter
+      const tdNo = document.createElement('td');
+      tdNo.className = 'col-numeric col-serial-no zawgyi-font';
+      tdNo.style.cssText = 'text-align: center; font-weight: 600; color: var(--text-muted);';
+      tdNo.textContent = String(idx + 1);
+      tr.appendChild(tdNo);
+
+      for (const col of COLUMN_DEFS) {
+        if (col.key === 'remarks') {
+          tr.appendChild(renderRemarkCell(row.remarks));
+        } else if (col.key === 'overtimeHours') {
+          const td = document.createElement('td');
+          td.className = 'col-numeric zawgyi-font';
+          const otVal = parseFloat(row.overtimeHours || '0');
+          if (!isNaN(otVal) && otVal > 0) {
+            const badge = document.createElement('span');
+            badge.className = 'badge badge-ot';
+            badge.textContent = `${row.overtimeHours} hrs`;
+            td.appendChild(badge);
+          } else {
+            td.textContent = row.overtimeHours || '0';
+            td.style.color = 'var(--text-muted)';
+          }
+          tr.appendChild(td);
+        } else if (col.key === 'absent') {
+          const td = document.createElement('td');
+          td.className = 'col-numeric zawgyi-font';
+          const abVal = parseFloat(row.absent || '0');
+          if (!isNaN(abVal) && abVal > 0) {
+            const badge = document.createElement('span');
+            badge.className = 'badge badge-absent';
+            badge.textContent = `${row.absent} hrs`;
+            td.appendChild(badge);
+          } else {
+            td.textContent = row.absent || '0';
+          }
+          tr.appendChild(td);
+        } else {
+          const td = document.createElement('td');
+          const value = String(row[col.key] ?? '');
+          td.textContent = value;
+          td.className = 'zawgyi-font';
+          if (col.raw) td.classList.add('col-raw-data');
+          if (col.numeric) td.classList.add('col-numeric');
+          tr.appendChild(td);
+        }
+      }
+      tbody.appendChild(tr);
+    });
+  };
+
+  renderTbody();
   table.appendChild(tbody);
   wrapper.appendChild(table);
   return wrapper;
@@ -643,6 +736,7 @@ export function buildLivePreviewSection(
   callbacks?: {
     onResetAll?: () => void;
     onDownload?: (btn: HTMLButtonElement) => void;
+    onExportVisible?: (rows: AttendanceRow[]) => void;
   }
 ): HTMLElement {
   const container = document.createElement('div');
@@ -690,33 +784,37 @@ export function buildLivePreviewSection(
     const text = document.createElement('span');
     text.setAttribute('data-i18n', i18nKey);
     text.textContent = t(i18nKey);
+    const badge = document.createElement('span');
+    badge.className = 'filter-count-badge';
+    badge.style.color = 'var(--text-muted)';
     label.appendChild(input);
     label.appendChild(text);
-    return { label, input };
+    label.appendChild(badge);
+    return { label, input, text, badge, i18nKey };
   };
 
-  const { label: hideResolvedLabel, input: hideResolvedCheckbox } = createCheckItem(
+  const { label: hideResolvedLabel, input: hideResolvedCheckbox, badge: hideResolvedBadge } = createCheckItem(
     'filter-hide-resolved',
     'filter.hideResolved',
     activeFilter.hideResolved !== false
   );
   filterControlsWrap.appendChild(hideResolvedLabel);
 
-  const { label: hideFutureShiftsLabel, input: hideFutureShiftsCheckbox } = createCheckItem(
+  const { label: hideFutureShiftsLabel, input: hideFutureShiftsCheckbox, badge: hideFutureShiftsBadge } = createCheckItem(
     'filter-hide-future',
     'filter.hideFuture',
     activeFilter.hideFutureShifts !== false
   );
   filterControlsWrap.appendChild(hideFutureShiftsLabel);
 
-  const { label: hideAppliedLabel, input: hideAppliedCheckbox } = createCheckItem(
+  const { label: hideAppliedLabel, input: hideAppliedCheckbox, badge: hideAppliedBadge } = createCheckItem(
     'filter-hide-applied',
     'filter.hideApplied',
     activeFilter.hideApplied !== false
   );
   filterControlsWrap.appendChild(hideAppliedLabel);
 
-  const { label: hideNoCheckoutLabel, input: hideNoCheckoutCheckbox } = createCheckItem(
+  const { label: hideNoCheckoutLabel, input: hideNoCheckoutCheckbox, badge: hideNoCheckoutBadge } = createCheckItem(
     'filter-hide-no-checkout',
     'filter.hideNoCheckout',
     activeFilter.hideNoCheckout === true
@@ -918,6 +1016,17 @@ export function buildLivePreviewSection(
   // Summary bar above the table showing total and filtered counts
   const summaryBar = document.createElement('div');
   summaryBar.className = 'live-table-summary-bar';
+  
+  const exportBtn = document.createElement('button');
+  exportBtn.type = 'button';
+  exportBtn.className = 'btn btn-secondary btn-sm';
+  exportBtn.innerHTML = `📥 <span data-i18n="preview.exportVisible">${t('preview.exportVisible') || 'Export to Excel'}</span>`;
+  exportBtn.style.cssText = 'margin-left: auto;';
+  exportBtn.addEventListener('click', () => {
+    callbacks?.onExportVisible?.(currentFilteredRows);
+  });
+  summaryBar.appendChild(exportBtn);
+  
   container.appendChild(summaryBar);
 
   // Table wrapper container
@@ -925,6 +1034,7 @@ export function buildLivePreviewSection(
   tableHolder.style.width = '100%';
   container.appendChild(tableHolder);
 
+  let currentFilteredRows: AttendanceRow[] = rows;
   // ── Filter evaluation ──
   const applyFilters = () => {
     const isHideResolved = hideResolvedCheckbox.checked;
@@ -956,6 +1066,56 @@ export function buildLivePreviewSection(
       !current.hideApplied ||
       current.hideNoCheckout
     );
+
+    let cApplied = 0;
+    let cNoCheckout = 0;
+    let cFuture = 0;
+    let cResolved = 0;
+
+    const todayStrGlobal = (() => {
+      const d = new Date();
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${yyyy}${mm}${dd}`;
+    })();
+
+    rows.forEach(r => {
+      if (isRemarkGreen(r.remarks)) cApplied++;
+      
+      const isNoCO = r.remarks.includes('အထြက္တိုင္းကဒ် မရွိပါ') ||
+          r.remarks.includes('အထွက်တိုင်းကဒ်မရှိပါ') ||
+          r.remarks.includes('အထွက်တိုင်းကတ် မရှိပါ') ||
+          r.remarks.includes(REMARK_NO_CHECKOUT);
+      if (isNoCO) cNoCheckout++;
+      
+      const rowDate = normalizeDateDigits(r.attendanceDate);
+      const actPunches = r.actualTimeCard.split(',').map((s) => s.trim()).filter((s) => s.length >= 4 && !isNaN(parseInt(s, 10)));
+      const isFutureOrNight = rowDate >= todayStrGlobal && actPunches.length === 0 && (r.remarks === '' || r.remarks.includes('ညဆိုင္း') || r.remarks.includes('ညဆိုင်း'));
+      if (isFutureOrNight) cFuture++;
+      
+      if (isRowResolved(r) && !isFutureOrNight) {
+         cResolved++;
+      }
+    });
+
+    hideAppliedBadge.textContent = ` (${cApplied})`;
+    hideNoCheckoutBadge.textContent = ` (${cNoCheckout})`;
+    hideFutureShiftsBadge.textContent = ` (${cFuture})`;
+    hideResolvedBadge.textContent = ` (${cResolved})`;
+
+    Array.from(remSelect.options).forEach((opt) => {
+      opt.style.color = '';
+      if (isHideApplied && (
+        opt.value === (rulesConfig.remarkLeaveApplied || 'ခွင့်တိုင်ပြီး') ||
+        opt.value === (rulesConfig.remarkOtApplied || 'အိုတီတင်ပီး')
+      )) {
+        opt.style.color = 'var(--text-muted)';
+      }
+      if (isHideNoCheckout && opt.value === rulesConfig.remarkNoCheckout) {
+        opt.style.color = 'var(--text-muted)';
+      }
+    });
 
     const filtered = rows.filter((r) => {
       if (current.hideApplied && isRemarkGreen(r.remarks)) {
@@ -1037,6 +1197,8 @@ export function buildLivePreviewSection(
         ${filtered.length === rows.length ? t('preview.showingAll', { count: rows.length }) : t('preview.showingFiltered', { filtered: filtered.length, total: rows.length })}
       </div>
     `;
+    currentFilteredRows = filtered;
+    summaryBar.appendChild(exportBtn);
 
     // Update row count badge in filter panel header
     if (!hasActiveFilter && isHideResolved) {

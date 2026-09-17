@@ -585,9 +585,9 @@ h1, h2, h3, h4, h5 {
 }
 
 [data-theme="light"] .app-version-badge {
-  background: rgba(212, 175, 55, 0.15);
-  border-color: rgba(180, 83, 9, 0.35);
-  color: #B45309;
+  background: rgba(0, 0, 255, 0.08);
+  border-color: rgba(0, 0, 255, 0.30);
+  color: #0000FF;
 }
 
 /* Responsive: under 860px collapse to stacked */
@@ -2216,14 +2216,41 @@ h1, h2, h3, h4, h5 {
   font-family: 'Zawgyi-One', 'Zawgyi01', 'Masterpiece Uni Sans', sans-serif !important;
 }
 
-/* Remarks are generated as Unicode Myanmar — use Unicode font */
-.col-remark-cell .remark-text.myanmar-unicode-font {
-  font-family: 'Noto Sans Myanmar', 'Myanmar Text', 'Padauk', sans-serif !important;
+/* Remarks are generated as Zawgyi — use Zawgyi-One font */
+.col-remark-cell .remark-text.zawgyi-font {
+  font-family: 'Zawgyi-One', 'Zawgyi01', 'Masterpiece Uni Sans', sans-serif !important;
 }
 
 .preview-table thead th,
 .live-preview-table thead th {
   font-family: var(--font-ui) !important;
+  position: relative;
+  user-select: none;
+}
+
+/* ── Live View Table Resize & Sorting ─────────────────────────────────────── */
+.th-resize-handle {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: col-resize;
+  user-select: none;
+  z-index: 5;
+}
+
+.th-resize-handle:hover,
+.th-resize-handle:active {
+  background: var(--gold-500);
+}
+
+.sort-indicator {
+  display: inline-block;
+  font-size: 0.72rem;
+  margin-left: 4px;
+  color: var(--gold-500);
+  vertical-align: middle;
 }
 
 /* ── Serial No Column & Summary Bar ────────────────────────────────────────── */
@@ -2272,7 +2299,13 @@ h1, h2, h3, h4, h5 {
 .stat-badge.stat-total {
   border-color: rgba(212, 175, 55, 0.35);
   background: rgba(212, 175, 55, 0.1);
-  color: var(--accent-gold, #E6C875);
+  color: var(--gold-500, #E6C875);
+}
+
+[data-theme="light"] .stat-badge.stat-total {
+  border-color: rgba(0, 0, 255, 0.30);
+  background: rgba(0, 0, 255, 0.08);
+  color: #0000FF;
 }
 
 .stat-badge.stat-filtered {

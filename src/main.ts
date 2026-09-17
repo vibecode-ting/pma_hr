@@ -29,7 +29,7 @@ import {
   isRemarkGreen,
   isRemarkRed,
 } from './rules';
-import { exportSelection } from './export';
+import { exportSelection, exportVisibleRows } from './export';
 import {
   createStarfield,
   buildLangSwitcher,
@@ -159,6 +159,25 @@ async function loadRulesConfig(): Promise<void> {
       rulesConfig = JSON.parse(JSON.stringify(defaultRulesConfig));
     }
   } catch { /* use defaults */ }
+
+  try {
+    const classResp = await fetch('./class_assign_hours.json');
+    if (classResp.ok) {
+      const classData = await classResp.json();
+      if (Array.isArray(classData)) {
+        const mappedShifts = classData.map((entry: any) => ({
+          shiftNo: entry.shift_no,
+          shiftName: entry.class,
+          startTime: entry.assigned_hours?.start_time || '',
+          endTime: entry.assigned_hours?.end_time || '',
+          lunchTime: entry.lunch_time || '-',
+          overtime: entry.overtime
+        }));
+        defaultRulesConfig.shifts = mappedShifts;
+        rulesConfig.shifts = JSON.parse(JSON.stringify(mappedShifts));
+      }
+    }
+  } catch { /* fallback to default shifts */ }
 
   const saved = localStorage.getItem('hr_portal_rules_config');
   if (saved) {
@@ -1125,7 +1144,7 @@ function renderApp(container: HTMLElement): void {
 
     const shiftTitle = document.createElement('div');
     shiftTitle.className = 'shift-config-title';
-    shiftTitle.innerHTML = `<span style="display:inline-flex;align-items:center;gap:6px;">${icons.calendar || '📅'} <span>Shift Schedules (Matched by Excel "Class" Column)</span></span>`;
+    shiftTitle.innerHTML = `<span style="display:inline-flex;align-items:center;gap:6px;">${icons.calendar || '📅'} <span>${t('settings.rulesShiftTitle') || 'Shift Schedules (Matched by Excel "Class" Column)'}</span></span>`;
     shiftHeader.appendChild(shiftTitle);
 
     const shiftActions = document.createElement('div');
@@ -1134,7 +1153,7 @@ function renderApp(container: HTMLElement): void {
     const addShiftBtn = document.createElement('button');
     addShiftBtn.type = 'button';
     addShiftBtn.className = 'btn btn-secondary btn-sm';
-    addShiftBtn.innerHTML = `+ Add Shift`;
+    addShiftBtn.innerHTML = t('settings.rulesAddShift') || '+ Add Shift';
     addShiftBtn.addEventListener('click', () => {
       const newShiftNo = prompt('Enter Shift No / Class (e.g. 99):');
       if (!newShiftNo) return;
@@ -1147,14 +1166,14 @@ function renderApp(container: HTMLElement): void {
       });
       rebuildShiftTable();
       reapplyRulesAndRefresh();
-      showToast(`Shift ${newShiftNo} added`, 'success');
+      showToast(t('settings.shiftAdded') || `Shift ${newShiftNo} added`, 'success');
     });
     shiftActions.appendChild(addShiftBtn);
 
     const resetBtn = document.createElement('button');
     resetBtn.type = 'button';
     resetBtn.className = 'btn btn-secondary btn-sm';
-    resetBtn.innerHTML = `${icons.rotateCcw} <span>Reset Defaults</span>`;
+    resetBtn.innerHTML = `${icons.rotateCcw} <span>${t('settings.rulesResetDefaults') || 'Reset Defaults'}</span>`;
     resetBtn.addEventListener('click', () => {
       if (confirm('Reset all shift schedules and remark rules to factory defaults?')) {
         localStorage.removeItem('hr_portal_rules_config');
@@ -1177,12 +1196,13 @@ function renderApp(container: HTMLElement): void {
     table.innerHTML = `
       <thead>
         <tr>
-          <th>Class (Shift No)</th>
-          <th>Shift Name</th>
-          <th>Start Time</th>
-          <th>Lunch Time</th>
-          <th>Get Off Work</th>
-          <th>Action</th>
+          <th>${t('settings.shiftNo') || 'Class (Shift No)'}</th>
+          <th>${t('settings.shiftName') || 'Shift Name'}</th>
+          <th>${t('settings.shiftStart') || 'Start Time'}</th>
+          <th>${t('settings.shiftLunch') || 'Lunch Time'}</th>
+          <th>${t('settings.shiftEnd') || 'Get Off Work'}</th>
+          <th>${t('settings.shiftOvertime') || 'Overtime'}</th>
+          <th>${t('settings.shiftAction') || 'Action'}</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -1261,6 +1281,28 @@ function renderApp(container: HTMLElement): void {
         tdEnd.appendChild(inpEnd);
         tr.appendChild(tdEnd);
 
+        // Overtime
+        const tdOt = document.createElement('td');
+        const otSummary = document.createElement('span');
+        otSummary.style.fontSize = '0.85em';
+        otSummary.style.marginRight = '8px';
+        const renderOtSummary = () => {
+          if (!s.overtime || s.overtime.length === 0) {
+            otSummary.textContent = 'None';
+          } else {
+            otSummary.textContent = `${s.overtime.length} blocks`;
+          }
+        };
+        renderOtSummary();
+        const otBtn = document.createElement('button');
+        otBtn.type = 'button';
+        otBtn.className = 'btn btn-secondary btn-sm';
+        otBtn.style.padding = '2px 6px';
+        otBtn.innerHTML = '✎';
+        tdOt.appendChild(otSummary);
+        tdOt.appendChild(otBtn);
+        tr.appendChild(tdOt);
+
         // Action: Delete
         const tdAct = document.createElement('td');
         const delBtn = document.createElement('button');
@@ -1277,7 +1319,105 @@ function renderApp(container: HTMLElement): void {
         tdAct.appendChild(delBtn);
         tr.appendChild(tdAct);
 
+        const trExpand = document.createElement('tr');
+        trExpand.style.display = 'none';
+        const tdExpand = document.createElement('td');
+        tdExpand.colSpan = 7;
+        tdExpand.style.backgroundColor = 'var(--bg-panel-raised)';
+        tdExpand.style.padding = '12px';
+        
+        const renderOtEditor = () => {
+          tdExpand.innerHTML = '';
+          const otWrap = document.createElement('div');
+          otWrap.style.display = 'flex';
+          otWrap.style.flexDirection = 'column';
+          otWrap.style.gap = '8px';
+          
+          if (!s.overtime) s.overtime = [];
+          
+          s.overtime.forEach((ot, otIdx) => {
+            const row = document.createElement('div');
+            row.style.display = 'flex';
+            row.style.gap = '8px';
+            row.style.alignItems = 'center';
+            
+            const typeSel = document.createElement('select');
+            typeSel.className = 'form-input shift-input';
+            typeSel.style.width = '80px';
+            const optWork = document.createElement('option');
+            optWork.value = 'work';
+            optWork.text = 'Work';
+            const optRest = document.createElement('option');
+            optRest.value = 'rest';
+            optRest.text = 'Rest';
+            typeSel.appendChild(optWork);
+            typeSel.appendChild(optRest);
+            typeSel.value = ot.work !== undefined ? 'work' : 'rest';
+            
+            const timeInp = document.createElement('input');
+            timeInp.className = 'form-input shift-input';
+            timeInp.style.width = '120px';
+            timeInp.value = ot.work !== undefined ? ot.work : (ot.rest || '');
+            timeInp.placeholder = '13:00~15:00';
+            
+            const updateOt = () => {
+              const tVal = timeInp.value.trim();
+              if (typeSel.value === 'work') {
+                s.overtime![otIdx] = { work: tVal };
+              } else {
+                s.overtime![otIdx] = { rest: tVal };
+              }
+              renderOtSummary();
+              reapplyRulesAndRefresh();
+            };
+            typeSel.addEventListener('change', updateOt);
+            timeInp.addEventListener('change', updateOt);
+            
+            const delOtBtn = document.createElement('button');
+            delOtBtn.type = 'button';
+            delOtBtn.className = 'btn btn-secondary btn-sm';
+            delOtBtn.innerHTML = '✕';
+            delOtBtn.addEventListener('click', () => {
+              s.overtime!.splice(otIdx, 1);
+              renderOtEditor();
+              renderOtSummary();
+              reapplyRulesAndRefresh();
+            });
+            
+            row.appendChild(typeSel);
+            row.appendChild(timeInp);
+            row.appendChild(delOtBtn);
+            otWrap.appendChild(row);
+          });
+          
+          const addOtBtn = document.createElement('button');
+          addOtBtn.type = 'button';
+          addOtBtn.className = 'btn btn-secondary btn-sm';
+          addOtBtn.style.alignSelf = 'flex-start';
+          addOtBtn.innerHTML = t('settings.addOvertimeBlock') || '+ Add Overtime Block';
+          addOtBtn.addEventListener('click', () => {
+            if (!s.overtime) s.overtime = [];
+            s.overtime.push({ work: '' });
+            renderOtEditor();
+            renderOtSummary();
+          });
+          otWrap.appendChild(addOtBtn);
+          tdExpand.appendChild(otWrap);
+        };
+        
+        otBtn.addEventListener('click', () => {
+          if (trExpand.style.display === 'none') {
+            trExpand.style.display = 'table-row';
+            renderOtEditor();
+          } else {
+            trExpand.style.display = 'none';
+          }
+        });
+        
+        trExpand.appendChild(tdExpand);
+
         tbody.appendChild(tr);
+        tbody.appendChild(trExpand);
       });
     };
 
@@ -1294,7 +1434,7 @@ function renderApp(container: HTMLElement): void {
     const resetRulesBtn = document.createElement('button');
     resetRulesBtn.type = 'button';
     resetRulesBtn.className = 'btn btn-secondary btn-sm';
-    resetRulesBtn.innerHTML = `${icons.rotateCcw} <span>Reset all rules & shifts to defaults</span>`;
+    resetRulesBtn.innerHTML = `${icons.rotateCcw} <span>${t('settings.rulesResetAll') || 'Reset all rules & shifts to defaults'}</span>`;
     resetRulesBtn.addEventListener('click', () => {
       rulesConfig = JSON.parse(JSON.stringify(defaultRulesConfig));
       if (inputs.graceMinutes) inputs.graceMinutes.value = String(rulesConfig.graceMinutes);
@@ -1318,7 +1458,7 @@ function renderApp(container: HTMLElement): void {
 
     const note = document.createElement('p');
     note.className = 'rules-note';
-    note.textContent = 'Shift schedule matches the "Class" column in uploaded Excel files. Defaults loaded from rules.json.';
+    note.textContent = t('settings.rulesNote') || 'Shift schedule matches the "Class" column in uploaded Excel files. Defaults loaded from rules.json.';
     panel.appendChild(note);
 
     return panel;
@@ -1336,7 +1476,7 @@ function renderApp(container: HTMLElement): void {
 
     const subDesc = document.createElement('p');
     subDesc.style.cssText = 'color:var(--text-muted);font-size:0.85rem;margin:0;';
-    subDesc.textContent = 'Pre-configure shift working hours, lunch break deductions, grace periods, and Myanmar remark rules before or after uploading.';
+    subDesc.textContent = t('settings.rulesDesc') || 'Pre-configure shift working hours, lunch break deductions, grace periods, and Myanmar remark rules before or after uploading.';
     cardTop.appendChild(subDesc);
 
     card.appendChild(cardTop);
@@ -1361,7 +1501,19 @@ function renderApp(container: HTMLElement): void {
         } catch (e) { showToast(String(e), 'error'); }
         btn.disabled = false;
         btn.innerHTML = `${icons.download} <span data-i18n="export.generate">${t('export.generate')}</span>`;
-      }
+      },
+      onExportVisible: async (filteredRows: AttendanceRow[]) => {
+        if (!filteredRows || filteredRows.length === 0) {
+          showToast(t('preview.noData') || 'No rows to export', 'info');
+          return;
+        }
+        try {
+          exportVisibleRows(filteredRows, 'attendance_live_view.xlsx');
+          showToast(t('export.generate') + ' ✅', 'success');
+        } catch (e) {
+          showToast(String(e), 'error');
+        }
+      },
     };
 
     const visibleRows = getVisibleRows();
